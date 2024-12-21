@@ -14,7 +14,7 @@ ERROR_ACTIVE = 0
 ERROR_PASSIVE = 1
 BUS_OFF = 2
 
-PERIOD = 2 # seconds
+PERIOD = 5 # seconds
 
 class Frame:
     SOF = 0b0  # Fixed value
@@ -87,13 +87,11 @@ class ECU:
     REC = 0
     status = ERROR_ACTIVE
 
-    canBus = None
-    frame = None
-
     TECvalues = []
     RECvalues = []
 
-    def __init__(self, canBus : 'CanBus', frame : Frame):
+    def __init__(self, name, canBus : 'CanBus', frame : Frame):
+        self.name = name
         self.canBus = canBus
         self.frame = frame
 
@@ -102,11 +100,11 @@ class ECU:
     
     def errorStatus(self):
         if(self.TEC > 127 or self.REC > 127):
-            status = ERROR_PASSIVE
+            self.status = ERROR_PASSIVE
         elif (self.TEC <= 127 and self.REC <= 127):
-            status = ERROR_ACTIVE
+            self.status = ERROR_ACTIVE
         elif (self.TEC > 255):
-            status = BUS_OFF
+            self.status = BUS_OFF
 
     def TECincrease(self):
         self.TEC+=8
@@ -128,12 +126,21 @@ class ECU:
         self.RECvalues.append(self.REC)
         self.errorStatus()
 
+    def getREC(self):
+        return self.REC
+
+    def getTEC(self):
+        return self.TEC
+
     def sendFrame(self):
-        self.canBus.sendFrame(self.frame)
+        self.canBus.sendFrameOnBus(self.frame)
  
     def checkCanBusFrame(self):
-        sendedFrame = self.canBus.getSendedFrame()
-        if(sendedFrame != self.frame.getBits):
+        canBusFrame = self.canBus.getSendedFrame()
+        ecuFrameBits = self.frame.getBits()
+        
+        if canBusFrame != ecuFrameBits:
+            print(f"Mismatch detected {self.name}:\nCAN Bus Frame: {canBusFrame}\nECU Frame Bits: {ecuFrameBits}")
             self.TECincrease()
 
     def getStatus(self):
@@ -193,9 +200,11 @@ class CanBus:
         ct = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         log_file = Path(f"log_{ct}.txt")
         self.file = log_file.open("a")
+        self.lock = threading.Lock()
 
-    def sendFrame(self, frame: 'Frame', ecu: 'ECU'):
-        self.frames.append([frame, ecu])
+    def sendFrameOnBus(self, frame: 'Frame'):
+        with self.lock:
+            self.frames.append(frame)
         
         # if bit not in {0b1, 0b0}:
         #     raise ValueError(f"Invalid bit value: {bit}. Only 0b1 and 0b0 are allowed.")
@@ -207,37 +216,39 @@ class CanBus:
     def removeInvalidFrames(self):
         """Rimuove i frame con SOF diverso da 0b0."""
         # Filtra solo i frame con SOF uguale a 0b0
-        self.frames = [(frame, ecu) for frame, ecu in self.frames if frame.SOF == 0b0]
+        self.frames = [(frame) for frame in self.frames if frame.SOF == 0b0]
 
     def getLowerID(self):
-        return min(frame.ID for frame, _ in self.frames)
+        return min(frame.ID for frame in self.frames)
 
     def onlyFramesWithID(self, ID):
-        self.frames = [(frame, ecu) for frame, ecu in self.frames if frame.ID == ID]
+        self.frames = [(frame) for frame in self.frames if frame.ID == ID]
     
     def porcess(self):
 
-        if (self.frames.count == 0):
-            pass
+        with self.lock:
+            if (len(self.frames) == 0):
+                return
 
-        self.removeInvalidFrames()
-        lowerID = self.getLowerID()
+            self.removeInvalidFrames()
+            lowerID = self.getLowerID()
 
-        self.onlyFramesWithID(lowerID)
+            self.onlyFramesWithID(lowerID)
 
-        framesBits = [frame.getBits() for frame, _ in self.frames]
-        maxLength = max(len(frame) for frame in framesBits)
+            framesBits = [frame.getBits() for frame in self.frames]
+            maxLength = max(len(frame) for frame in framesBits)
 
-        frameSended = []
+            frameSended = []
 
-        for i in range(maxLength):
-            frameSended.append(1)
+            for i in range(maxLength):
+                frameSended.append(1)   # Default recessive bit
 
-            for j in range(framesBits.count):
-                if(j<len(framesBits[j])):
-                    frameSended[i] = frameSended[i] & framesBits[j][i]
+                for j in range(len(framesBits)):
+                    if(j<len(framesBits[j])):
+                        frameSended[i] &= framesBits[j][i]  # Dominant bits win
 
-        self.lastSendedFrame = frameSended
+            print(f"Processed frame bits: {frameSended}")   
+            self.lastSendedFrame = frameSended
     
     def getSendedFrame(self):
         return self.lastSendedFrame
@@ -247,21 +258,21 @@ class CanBus:
             
 
 def attacker(canBus : 'CanBus', frame : 'Frame'):
-    attackerECU = ECU(canBus, frame)
+    attackerECU = ECU("Attacker", canBus, frame)
 
     while attackerECU.getStatus() == ERROR_ACTIVE:
         attackerECU.sendFrame()
-        print("attacker sends a frame")
+        print(f"current attacker TEC {attackerECU.getTEC()}")
         time.sleep(PERIOD)
         attackerECU.checkCanBusFrame()
 
 
 def victim(canBus : 'CanBus', frame : 'Frame'):
-    victimECU = ECU(canBus, frame)
+    victimECU = ECU("Victim", canBus, frame)
 
     while victimECU.getStatus() == ERROR_ACTIVE:
         victimECU.sendFrame()
-        print("victim sends a frame")
+        print(f"current victim TEC {victimECU.getTEC()}")
         time.sleep(PERIOD)
         victimECU.checkCanBusFrame()
 
@@ -270,28 +281,26 @@ def canBusThread(canBus : 'CanBus'):
     while True:
         time.sleep(PERIOD)
         canBus.porcess()
-        print("processed frame")
+        print(f"\n ---------------\nsendendFrame: {canBus.getSendedFrame()}\n ---------------\n")
         canBus.clearBus()
 
 
 if __name__ == "__main__":
     canBus = CanBus()
-    attackerFrame = Frame(0b01010101010, 2, [10, 255])
+    attackerFrame = Frame(0b01010101010, 2, [64, 64])
     victimFrame = Frame(0b01010101010, 2, [255, 255])
 
+    # Crea i thread correttamente senza eseguire le funzioni
+    canBus_thread = threading.Thread(target=canBusThread, args=(canBus,))
+    attacker_thread = threading.Thread(target=attacker, args=(canBus, attackerFrame))
+    victim_thread = threading.Thread(target=victim, args=(canBus, victimFrame))
 
-    canBus_thread = threading.Thread(target=canBusThread(canBus))
-    attacker_thread = threading.Thread(target=attacker(canBus, attackerFrame))
-    victim_thread = threading.Thread(target=victim(canBus, victimFrame))
-
-    print("threads created")
-
+    # Avvia i thread
     canBus_thread.start()
     attacker_thread.start()
     victim_thread.start()
-    print("threads started")
 
+    # Unisci i thread
     canBus_thread.join()
     attacker_thread.join()
     victim_thread.join()
-    print("threads joined")
