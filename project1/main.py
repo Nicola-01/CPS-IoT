@@ -3,49 +3,40 @@ import threading
 from ecu import ECU
 from can_bus import CanBus
 from frame import Frame
+from global_clock import GlobalClock
 
-PERIOD = 0.3  # seconds
-
-class GlobalClock:
-    def __init__(self):
-        self.event = threading.Event()
-
-    def start(self):
-        while True:
-            time.sleep(PERIOD)
-            self.event.set()  # Segnale per sincronizzare i processi
-            self.event.clear()  # Resetta l'evento
-
-    def wait(self):
-        self.event.wait()  # Ogni processo aspetta il segnale del clock
-
+PERIOD = 0.1  # seconds
 
 def attacker(canBus: 'CanBus', frame: 'Frame'):
     attackerECU = ECU("Attacker", canBus, frame)
-    while attackerECU.getStatus() == ECU.BUS_OFF:
-        attackerECU.sendFrame()
-        print(f"current attacker TEC {attackerECU.getTEC()}")
-        clock.wait()
-        time.sleep(PERIOD/3)
-        attackerECU.checkCanBusFrame()
+    print(f"Attacker frame {frame.getBits()}")
+    while attackerECU.getStatus() != ECU.BUS_OFF:
+        tranmitedStatus = attackerECU.sendFrame(clock)
+        # print(f"\n tranmitedStatus {tranmitedStatus} \n current Attacker TEC {attackerECU.getTEC()}")
+        while canBus.getStatus() != canBus.IDLE:
+            print("Attacker wait")
+            clock.wait() 
+
 
 def victim(canBus: 'CanBus', frame: 'Frame'):
     victimECU = ECU("Victim", canBus, frame)
-    while victimECU.getStatus() == ECU.BUS_OFF:
-        victimECU.sendFrame()
-        print(f"current victim TEC {victimECU.getTEC()}")
-        clock.wait()
-        time.sleep(PERIOD/3)
-        victimECU.checkCanBusFrame()
-    victimECU.diagrams()
+    print(f"Victim frame   {frame.getBits()}")
+    while victimECU.getStatus() != ECU.BUS_OFF:
+        tranmitedStatus = victimECU.sendFrame(clock)
+        # print(f"\n tranmitedStatus {tranmitedStatus} \n current Victim TEC {victimECU.getTEC()}")
+        while canBus.getStatus() != canBus.IDLE:
+            print("Victim wait")
+            clock.wait() 
 
 def canBusThread(canBus: 'CanBus'):
     while True:
         clock.wait()
-        # time.sleep(PERIOD/3)
-        canBus.process()
-        print(f"\n ---------------\nsendendFrame: {canBus.getSendedFrame()}\n ---------------\n")
-        canBus.clearBus()
+        canBus.nextBit()
+        clock.wait()
+        clock.wait()
+        if canBus.getStatus() == canBus.IDLE:
+            print(f"\n ---------------\nsendendFrame: {canBus.getSendedFrame()}\n ---------------\n")
+            canBus.clearBus()
 
 
 
@@ -54,7 +45,7 @@ if __name__ == "__main__":
     attackerFrame = Frame(0b01010101010, 2, [64, 64])
     victimFrame = Frame(0b01010101010, 2, [255, 255])
 
-    clock = GlobalClock()
+    clock = GlobalClock(PERIOD)
     clock_thread = threading.Thread(target=clock.start)
     clock_thread.start()
 
