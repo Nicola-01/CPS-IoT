@@ -11,7 +11,7 @@ class GlobalClock:
             time.sleep(self.period)
             self.event.set()  # Segnale per sincronizzare i processi
             self.event.clear()  # Resetta l'evento
-            print("---clock---\n")
+            # print("---clock---\n")
 
     def wait(self):
         self.event.wait()  # Ogni processo aspetta il segnale del clock

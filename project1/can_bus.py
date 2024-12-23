@@ -7,18 +7,12 @@ class CanBus:
     WAIT = "WAIT"
     
     def __init__(self, clock : 'GlobalClock'):
-        self.lock = threading.Lock()
-        
-        self.current_bit = 0b1
-        self.lastSendedBit = 0b1
-
-        self.frame = []
-        self.lastSendedFrame = []
-
-        self.status = self.IDLE
-
         self.clock = clock
+        self.lock = threading.Lock()
+        self.idle_event = threading.Event()
 
+        self.clearBus()
+        
     def transmitBit(self, bit):
         # if self.status == self.IDLE:
         #     self.clock.wait()
@@ -26,14 +20,16 @@ class CanBus:
             # print(f"recived {bit}")
             self.current_bit &= bit
             self.status = self.ACTIVE
+
+            self.idle_event.clear()
+            self.lastSendedFrame = []
             # self.lastSendedBit = self.current_bit
 
     def nextBit(self):
 
         if self.status == self.WAIT: # 2 cycles without new bit 
             self.lastSendedFrame = self.frame
-            self.status = self.IDLE
-            print("Frame to IDLE")
+            self.clearBus()
             return
         else:
             self.frame.append(self.current_bit)
@@ -52,7 +48,14 @@ class CanBus:
 
     def clearBus(self):
         self.current_bit = 0b1
-        self.frames = []
+        self.lastSendedBit = 0b1
+
+        self.frame = []
+
+        self.status = self.IDLE
+        self.idle_event.set() 
+
+        print("CanBus to IDLE")
 
     def getStatus(self):
         return self.status

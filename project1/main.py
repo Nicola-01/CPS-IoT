@@ -4,7 +4,7 @@ from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-PERIOD = 1  # seconds
+PERIOD = 0.1  # seconds
 
 def attacker(canBus: 'CanBus', frame: 'Frame'):
     attackerECU = ECU("Attacker", canBus, frame, clock)
@@ -13,9 +13,10 @@ def attacker(canBus: 'CanBus', frame: 'Frame'):
         # clock.wait()
         tranmitedStatus = attackerECU.sendFrame()
         print(f" tranmitedStatus {tranmitedStatus} \n current Attacker TEC {attackerECU.getTEC()}")
-        while canBus.getStatus() != canBus.IDLE:
-            print("Attacker wait")
-            clock.wait() 
+        # while canBus.getStatus() != canBus.IDLE:
+        #     print("Attacker wait")
+        #     clock.wait() 
+        canBus.idle_event.wait()
 
 
 def victim(canBus: 'CanBus', frame: 'Frame'):
@@ -25,9 +26,10 @@ def victim(canBus: 'CanBus', frame: 'Frame'):
         # clock.wait()
         tranmitedStatus = victimECU.sendFrame()
         print(f" tranmitedStatus {tranmitedStatus} \n current Victim TEC {victimECU.getTEC()}")
-        while canBus.getStatus() != canBus.IDLE:
-            print("Victim wait")
-            clock.wait() 
+        # while canBus.getStatus() != canBus.IDLE:
+        #     print("Victim wait")
+        #     clock.wait() 
+        canBus.idle_event.wait()
 
 def canBusThread(canBus: 'CanBus'):
     # clock.wait()
@@ -35,13 +37,15 @@ def canBusThread(canBus: 'CanBus'):
         print("canBus")
         clock.wait()
         canBus.nextBit()
+
         print("-------------------------")
         clock.wait()
         clock.wait()
-        if canBus.getStatus() == canBus.IDLE:
-            print(f"\n clearBus ---------------\nsendendFrame: {canBus.getSendedFrame()}\n ---------------\n")
-            # canBus.clearBus()
-            clock.wait()
+        # if canBus.getStatus() == canBus.IDLE:
+        #     print(f"\n clearBus ---------------\nsendendFrame: {canBus.getSendedFrame()}\n ---------------\n")
+        #     # canBus.clearBus()
+        #     clock.wait()
+        # canBus.idle_event.wait()
 
 
 
