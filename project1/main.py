@@ -1,11 +1,15 @@
 import threading
+import matplotlib.pyplot as plt
 from ecu import ECU
 from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-PERIOD = 0.1  # seconds
+PERIOD = 0.05  # seconds
 
+stop_event = threading.Event()
+
+'''
 def attacker(canBus: 'CanBus', frame: 'Frame'):
     attackerECU = ECU("Attacker", canBus, frame, clock)
     print(f"Attacker frame {frame.getBits()}")
@@ -23,17 +27,20 @@ def attacker(canBus: 'CanBus', frame: 'Frame'):
 def ecuThread(name, canBus: 'CanBus', frame: 'Frame'):
     ecu = ECU(name, canBus, frame, clock)
     print(f"{name} frame {frame.getBits()}")
-    while ecu.getStatus() != ECU.BUS_OFF:
+    while not stop_event.is_set() and ecu.getStatus() != ECU.BUS_OFF:
         tranmitedStatus = ecu.sendFrame()
         print(f" tranmitedStatus {tranmitedStatus} \n current {name} TEC {ecu.getTEC()}")
         canBus.idle_event.wait()
         clock.wait()
         clock.wait()
 
+        if ecu.getStatus() == ECU.BUS_OFF:
+            stop_event.set()  # Segnala a tutti i thread di fermarsi
+            print(f"{name} entered BUS_OFF. Stopping all threads.")
 
 def canBusThread(canBus: 'CanBus'):
     # clock.wait()
-    while True:
+    while not stop_event.is_set():
         print("canBus")
         clock.wait()
         canBus.nextBit()

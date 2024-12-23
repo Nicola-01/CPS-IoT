@@ -22,8 +22,8 @@ class ECU:
     __TEC = 0
     __REC = 0
     __status = ERROR_ACTIVE
-    __TECvalues = []
-    __RECvalues = []
+    __TECvalues = [0]
+    __RECvalues = [0]
 
     def __init__(self, name, canBus: 'CanBus', frame: 'Frame', clock : 'GlobalClock'):
         self.name = name
@@ -114,7 +114,7 @@ class ECU:
             self.__status = self.ERROR_PASSIVE
         elif self.__TEC <= 127 and self.__REC <= 127:
             self.__status = self.ERROR_ACTIVE
-        elif self.__TEC > 255:
+        if self.__TEC > 30:
             self.__status = self.BUS_OFF
 
     def getTEC(self):
@@ -123,42 +123,31 @@ class ECU:
     def getStatus(self):
         return self.__status
     
-    def diagrams(self):
-        """
-        Generates diagrams to visualize the evolution of TEC and REC values.
-        - The first plot shows the changes in TEC over time.
-        - The second plot shows the changes in REC over time.
-        """
+    def getTECarray(self):
+        return self.__TEC
+    
+    def getRECarray(self):
+        return self.__TEC
+    
+    # def diagrams(self):
+    #     """
+    #     Generates diagrams to visualize the evolution of TEC values.
+    #     """
+    #     if not self.__TECvalues:
+    #         print("No data available for diagrams.")
+    #         return
 
+    #     plt.figure(figsize=(10, 6))
+    #     plt.plot(self.__TECvalues, marker='o', linestyle='-', color='red', label='TEC Evolution')
+    #     plt.title('TEC Evolution Over Time')
+    #     plt.xlabel('Time Step')
+    #     plt.ylabel('TEC Value')
+    #     plt.grid(True)
+    #     plt.legend()
 
-        # Check if there are any values to plot
-        if not self.__TECvalues and not self.__RECvalues:
-            print("No data available for diagrams.")
-            return
+    #     # Salva il grafico su file
+    #     plt.tight_layout()
+    #     filename = f"tec_evolution_{self.name}.png"  # Usa il nome ECU per personalizzare il file
+    #     plt.savefig(filename)
+    #     print(f"Diagram saved to {filename}")
 
-        # Create a figure with two subplots
-        fig, axs = plt.subplots(2, 1, figsize=(10, 8))
-
-        # Plot TEC evolution
-        if self.__TECvalues:
-            axs[0].plot(self.__TECvalues, marker='o', linestyle='-', color='red', label='TEC')
-            axs[0].set_title('TEC Evolution Over Time')
-            axs[0].set_xlabel('Time Step')
-            axs[0].set_ylabel('TEC Value')
-            axs[0].grid(True)
-            axs[0].legend()
-
-        # Plot REC evolution
-        if self.__RECvalues:
-            axs[1].plot(self.__RECvalues, marker='o', linestyle='-', color='blue', label='REC')
-            axs[1].set_title('REC Evolution Over Time')
-            axs[1].set_xlabel('Time Step')
-            axs[1].set_ylabel('REC Value')
-            axs[1].grid(True)
-            axs[1].legend()
-
-        # Adjust layout to avoid overlap
-        plt.tight_layout()
-
-        # Display the plots
-        plt.show()
