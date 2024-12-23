@@ -20,20 +20,16 @@ def attacker(canBus: 'CanBus', frame: 'Frame'):
         clock.wait()
         clock.wait()
 
-
-def victim(canBus: 'CanBus', frame: 'Frame'):
-    victimECU = ECU("Victim", canBus, frame, clock)
-    print(f"Victim frame   {frame.getBits()}")
-    while victimECU.getStatus() != ECU.BUS_OFF:
-        # clock.wait()
-        tranmitedStatus = victimECU.sendFrame()
-        print(f" tranmitedStatus {tranmitedStatus} \n current Victim TEC {victimECU.getTEC()}")
-        # while canBus.getStatus() != canBus.IDLE:
-        #     print("Victim wait")
-        #     clock.wait() 
+def ecuThread(name, canBus: 'CanBus', frame: 'Frame'):
+    ecu = ECU(name, canBus, frame, clock)
+    print(f"{name} frame {frame.getBits()}")
+    while ecu.getStatus() != ECU.BUS_OFF:
+        tranmitedStatus = ecu.sendFrame()
+        print(f" tranmitedStatus {tranmitedStatus} \n current {name} TEC {ecu.getTEC()}")
         canBus.idle_event.wait()
         clock.wait()
         clock.wait()
+
 
 def canBusThread(canBus: 'CanBus'):
     # clock.wait()
@@ -59,13 +55,18 @@ if __name__ == "__main__":
     clock_thread.start()
 
     canBus = CanBus(clock)
-    attackerFrame = Frame(0b01010101010, 2, [64, 64])
     victimFrame = Frame(0b01010101010, 2, [255, 255])
+    attackerFrame = Frame(0b01010101010, 2, [64, 64])
 
     canBus_thread = threading.Thread(target=canBusThread, args=(canBus,))
-    attacker_thread = threading.Thread(target=attacker, args=(canBus, attackerFrame))
-    victim_thread = threading.Thread(target=victim, args=(canBus, victimFrame))
+    ecu_thread = [
+        threading.Thread(target=ecuThread, args=("Victim", canBus, victimFrame)),
+        threading.Thread(target=ecuThread, args=("Attacker", canBus, attackerFrame))
+        ]
+
+    # attacker_thread = threading.Thread(target=attacker, args=(canBus, attackerFrame))
 
     canBus_thread.start()
-    attacker_thread.start()
-    victim_thread.start()
+    for thread in ecu_thread: thread.start() 
+
+    # attacker_thread.start()
