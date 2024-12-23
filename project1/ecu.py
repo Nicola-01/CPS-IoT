@@ -15,6 +15,7 @@ class ECU:
     COMPLITED = "COMPLITED"
     DIFFERENT_ID = "DIFFERENT_ID"
     FLAG_SENDED = "FLAG_SENDED"
+    STUFF_ERROR = "STUFF_ERROR"
 
     __ERROR_ACTIVE_FLAG = [0b0] * 6
     __ERROR_PASSIVE_FLAG = [0b1] * 6
@@ -33,6 +34,8 @@ class ECU:
 
     def sendFrame(self):
 
+        recivedBit = []
+
         if self.__status == self.BUS_OFF:
             return
 
@@ -48,6 +51,11 @@ class ECU:
             self.clock.wait()
             lastSendedBit = self.canBus.getSendedBit()
 
+            recivedBit.append(lastSendedBit)
+            if self.__checkStuffRule(recivedBit):
+                self.__sendError()
+                return self.STUFF_ERROR
+
             print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
 
             if i >= 1 and i <= 11: # check the id
@@ -56,20 +64,7 @@ class ECU:
 
             elif i > 11:
                 if frameBits[i] != lastSendedBit:
-
-                    if self.__status == self.ERROR_ACTIVE:
-                        error_flag = self.__ERROR_ACTIVE_FLAG
-                    else: 
-                        error_flag = self.__ERROR_PASSIVE_FLAG
-
-                    print(f"{self.name} flag sended {error_flag}")
-
-                    for bit in error_flag:
-                        self.canBus.transmitBit(bit)
-                        self.clock.wait()
-                        self.clock.wait()
-                        self.clock.wait()
-
+                    self.__sendError()
                     self.TECincrease()
                     return self.FLAG_SENDED
                 
@@ -128,3 +123,27 @@ class ECU:
     
     def getRECarray(self):
         return self.__RECvalues
+    
+    def __checkStuffRule(self, recivedBit : list):
+        if len(recivedBit) < 6:
+            return False
+
+        sum = 0
+        for bit in recivedBit[-6:][::-1]: # check only last 6
+            sum += bit
+        
+        return (sum == 0 or sum == 6) # 6 bits to 0 or 6 bits to 1
+    
+    def __sendError(self):
+        if self.__status == self.ERROR_ACTIVE:
+            error_flag = self.__ERROR_ACTIVE_FLAG
+        else: 
+            error_flag = self.__ERROR_PASSIVE_FLAG
+
+        print(f"{self.name} flag sended {error_flag}")
+
+        for bit in error_flag:
+            self.canBus.transmitBit(bit)
+            self.clock.wait()
+            self.clock.wait()
+            self.clock.wait()

@@ -28,4 +28,24 @@ class Frame:
             data_bits.extend([int(b) for b in f"{byte:08b}"])
         eof_bits = [int(b) for b in f"{self.__EOF:07b}"]
 
-        return sof_bits + id_bits + dlc_bits + data_bits + eof_bits
+        bitFrame = sof_bits + id_bits + dlc_bits + data_bits + eof_bits
+
+        return self.__addStuffing(bitFrame)
+    
+    def __addStuffing(self, bitFrame):
+        stuffedFrame = []
+        count = 0
+        lastBit = None
+
+        for bit in bitFrame:
+            stuffedFrame.append(bit)
+            if bit == lastBit:
+                count += 1
+                if count == 5:
+                    stuffedFrame.append(1 - bit) # opposit bit
+                    count = 0
+            else:
+                count = 1
+            lastBit = bit
+
+        return stuffedFrame

@@ -5,7 +5,7 @@ from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-PERIOD = 0.001  # seconds
+PERIOD = 0.05  # seconds
 
 stop_event = threading.Event()
 
