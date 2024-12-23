@@ -14,16 +14,13 @@ class CanBus:
         self.clearBus()
         
     def transmitBit(self, bit):
-        # if self.status == self.IDLE:
-        #     self.clock.wait()
         with self.lock:
             # print(f"recived {bit}")
-            self.current_bit &= bit
             self.status = self.ACTIVE
+            self.current_bit &= bit
 
             self.idle_event.clear()
             self.lastSendedFrame = []
-            # self.lastSendedBit = self.current_bit
 
     def nextBit(self):
 

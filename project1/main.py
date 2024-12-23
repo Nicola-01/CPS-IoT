@@ -17,6 +17,8 @@ def attacker(canBus: 'CanBus', frame: 'Frame'):
         #     print("Attacker wait")
         #     clock.wait() 
         canBus.idle_event.wait()
+        clock.wait()
+        clock.wait()
 
 
 def victim(canBus: 'CanBus', frame: 'Frame'):
@@ -30,6 +32,8 @@ def victim(canBus: 'CanBus', frame: 'Frame'):
         #     print("Victim wait")
         #     clock.wait() 
         canBus.idle_event.wait()
+        clock.wait()
+        clock.wait()
 
 def canBusThread(canBus: 'CanBus'):
     # clock.wait()
