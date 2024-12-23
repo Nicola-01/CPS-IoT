@@ -25,12 +25,13 @@ class ECU:
     __TECvalues = []
     __RECvalues = []
 
-    def __init__(self, name, canBus: 'CanBus', frame: 'Frame'):
+    def __init__(self, name, canBus: 'CanBus', frame: 'Frame', clock : 'GlobalClock'):
         self.name = name
         self.canBus = canBus
         self.frame = frame
+        self.clock = clock
 
-    def sendFrame(self, clock : 'GlobalClock'):
+    def sendFrame(self):
 
         if self.__status == self.BUS_OFF:
             return
@@ -41,11 +42,11 @@ class ECU:
 
         while True:
             self.canBus.transmitBit(frameBits[i])
-            clock.wait()
-            clock.wait()
+            self.clock.wait()
+            self.clock.wait()
             lastSendedBit = self.canBus.getSendedBit()
 
-            # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n\n")
+            print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n\n")
 
             if i >= 1 and i <= 11: # check the id
                 if frameBits[i] != lastSendedBit:
@@ -59,13 +60,13 @@ class ECU:
                     else: 
                         error_flag = self.__ERROR_PASSIVE_FLAG
 
+                    print(f"{self.name} flag sended {error_flag}")
+
                     for bit in error_flag:
                         self.canBus.transmitBit(bit)
-                        clock.wait()
-                        clock.wait()
-                        clock.wait()
-
-                    print(f"{self.name} flag sended {error_flag}")
+                        self.clock.wait()
+                        self.clock.wait()
+                        self.clock.wait()
 
                     self.TECincrease()
                     return self.FLAG_SENDED
@@ -73,46 +74,34 @@ class ECU:
             i += 1
             if len(frameBits) == i:
                 return self.COMPLITED
-            clock.wait()
-
-
-    # def checkCanBusFrame(self):
-    #     canBusFrame = self.canBus.getSendedFrame()
-    #     ecuFrameBits = self.frame.getBits()
-    #     if canBusFrame[1:12] == canBusFrame[1:12]: # check if is the same ID
-    #         if canBusFrame != ecuFrameBits: # than check the msg
-    #             # TODO: send error flag
-    #             self.TECincrease()
-    #             # print(f"Mismatch detected {self.name}:\nCAN Bus Frame: {canBusFrame}\nECU Frame Bits: {ecuFrameBits}")
-    #         else:
-    #             self.TECdecrease()
+            self.clock.wait()
     
     def checkBound(self, errorCounter):
         return errorCounter >= 0 and errorCounter <= 255
 
     def TECincrease(self):
-        if self.checkBound(self.__TEC):
+        if not self.checkBound(self.__TEC):
             return
         self.__TEC += 8
         self.__TECvalues.append(self.__TEC)
         self.errorStatus()
 
     def TECdecrease(self):
-        if self.checkBound(self.__TEC):
+        if not self.checkBound(self.__TEC):
             return
         self.__TEC-=1
         self.__TECvalues.append(self.__TEC)
         self.errorStatus()
 
     def RECincrease(self):
-        if self.checkBound(self.__REC):
+        if not self.checkBound(self.__REC):
             return
         self.__REC+=1
         self.__RECvalues.append(self.__REC)
         self.errorStatus()
 
     def RECdecrease(self):
-        if self.checkBound(self.__REC):
+        if not self.checkBound(self.__REC):
             return
         self.__REC-=1
         self.__RECvalues.append(self.__REC)
