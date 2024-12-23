@@ -23,6 +23,7 @@ def attacker(canBus: 'CanBus', frame: 'Frame'):
         canBus.idle_event.wait()
         clock.wait()
         clock.wait()
+        '''
 
 def ecuThread(name, canBus: 'CanBus', frame: 'Frame'):
     ecu = ECU(name, canBus, frame, clock)
