@@ -42,11 +42,13 @@ class ECU:
 
         while True:
             self.canBus.transmitBit(frameBits[i])
+            print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}\n")
+            
             self.clock.wait()
             self.clock.wait()
             lastSendedBit = self.canBus.getSendedBit()
 
-            print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n\n")
+            print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
 
             if i >= 1 and i <= 11: # check the id
                 if frameBits[i] != lastSendedBit:

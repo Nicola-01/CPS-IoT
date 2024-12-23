@@ -1,8 +1,6 @@
 import threading
 from global_clock import GlobalClock
 
-from frame import Frame
-
 class CanBus:
     IDLE = "IDLE"
     ACTIVE = "ACTIVE"
@@ -22,8 +20,8 @@ class CanBus:
         self.clock = clock
 
     def transmitBit(self, bit):
-        if self.status == self.IDLE:
-            self.clock.wait()
+        # if self.status == self.IDLE:
+        #     self.clock.wait()
         with self.lock:
             # print(f"recived {bit}")
             self.current_bit &= bit
@@ -58,14 +56,3 @@ class CanBus:
 
     def getStatus(self):
         return self.status
-
-
-    # def removeInvalidFrames(self):
-    #     """Rimuove i frame con SOF diverso da 0b0."""
-    #     self.frames = [frame for frame in self.frames if frame.SOF == 0b0]
-
-    # def getLowerID(self):
-    #     return min(frame.ID for frame in self.frames)
-
-    # def onlyFramesWithID(self, ID):
-    #     self.frames = [frame for frame in self.frames if frame.ID == ID]

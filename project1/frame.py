@@ -1,4 +1,7 @@
 class Frame:
+
+    # https://en.wikipedia.org/wiki/CAN_bus#Base_frame_format
+
     __SOF = 0b0  # Fixed value
     __ID = 0b00000000000  # 11-bit identifier for CAN base
     __DLC = 0  # Number of bytes of data 
