@@ -5,9 +5,12 @@ from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-PERIOD = 0.05  # seconds
+PERIOD = 0.001  # seconds
 
 stop_event = threading.Event()
+
+TECarr = [[], []]
+RECarr = [[], []]
 
 '''
 def attacker(canBus: 'CanBus', frame: 'Frame'):
@@ -25,7 +28,7 @@ def attacker(canBus: 'CanBus', frame: 'Frame'):
         clock.wait()
         '''
 
-def ecuThread(name, canBus: 'CanBus', frame: 'Frame'):
+def ecuThread(name, index, canBus: 'CanBus', frame: 'Frame'):
     ecu = ECU(name, canBus, frame, clock)
     print(f"{name} frame {frame.getBits()}")
     while not stop_event.is_set() and ecu.getStatus() != ECU.BUS_OFF:
@@ -38,6 +41,32 @@ def ecuThread(name, canBus: 'CanBus', frame: 'Frame'):
         if ecu.getStatus() == ECU.BUS_OFF:
             stop_event.set()  # Segnala a tutti i thread di fermarsi
             print(f"{name} entered BUS_OFF. Stopping all threads.")
+            TECarr[index] = ecu.getTECarray()
+            RECarr[index] = ecu.getRECarray()
+
+def plot_graph(tec_data, rec_data):
+    """
+    Funzione per generare il grafico con i dati TEC e REC.
+    """
+    plt.figure(figsize=(10, 6))
+
+    # Grafico per TEC
+    plt.subplot(2, 1, 1)
+    plt.plot(tec_data, label='TEC')
+    plt.xlabel('Time')
+    plt.ylabel('TEC Value')
+    plt.legend()
+
+    # Grafico per REC
+    plt.subplot(2, 1, 2)
+    plt.plot(rec_data, label='REC')
+    plt.xlabel('Time')
+    plt.ylabel('REC Value')
+    plt.legend()
+
+    # Mostra il grafico
+    plt.tight_layout()
+    plt.show()
 
 def canBusThread(canBus: 'CanBus'):
     # clock.wait()
@@ -49,12 +78,6 @@ def canBusThread(canBus: 'CanBus'):
         print("-------------------------")
         clock.wait()
         clock.wait()
-        # if canBus.getStatus() == canBus.IDLE:
-        #     print(f"\n clearBus ---------------\nsendendFrame: {canBus.getSendedFrame()}\n ---------------\n")
-        #     # canBus.clearBus()
-        #     clock.wait()
-        # canBus.idle_event.wait()
-
 
 
 if __name__ == "__main__":
@@ -67,14 +90,22 @@ if __name__ == "__main__":
     attackerFrame = Frame(0b01010101010, 2, [64, 64])
 
     canBus_thread = threading.Thread(target=canBusThread, args=(canBus,))
-    ecu_thread = [
-        threading.Thread(target=ecuThread, args=("Victim", canBus, victimFrame)),
-        threading.Thread(target=ecuThread, args=("Attacker", canBus, attackerFrame))
+    ecu_threads = [
+        threading.Thread(target=ecuThread, args=("Victim", 0, canBus, victimFrame)),
+        threading.Thread(target=ecuThread, args=("Attacker", 1, canBus, attackerFrame))
         ]
 
     # attacker_thread = threading.Thread(target=attacker, args=(canBus, attackerFrame))
 
     canBus_thread.start()
-    for thread in ecu_thread: thread.start() 
+    for thread in ecu_threads: thread.start() 
+
+    for thread in ecu_threads:
+        thread.join()
+    canBus_thread.join()
+
+    print("All threads stopped.")
+
+    plot_graph(TECarr[0], RECarr[0])
 
     # attacker_thread.start()

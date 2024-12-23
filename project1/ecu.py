@@ -79,7 +79,7 @@ class ECU:
             self.clock.wait()
     
     def checkBound(self, errorCounter):
-        return errorCounter >= 0 and errorCounter <= 255
+        return errorCounter >= 0 # and errorCounter <= 300
 
     def TECincrease(self):
         if not self.checkBound(self.__TEC):
@@ -112,9 +112,9 @@ class ECU:
     def errorStatus(self):
         if self.__TEC > 127 or self.__REC > 127:
             self.__status = self.ERROR_PASSIVE
-        elif self.__TEC <= 127 and self.__REC <= 127:
+        if self.__TEC <= 127 and self.__REC <= 127:
             self.__status = self.ERROR_ACTIVE
-        if self.__TEC > 30:
+        if self.__TEC > 255:
             self.__status = self.BUS_OFF
 
     def getTEC(self):
@@ -124,30 +124,7 @@ class ECU:
         return self.__status
     
     def getTECarray(self):
-        return self.__TEC
+        return self.__TECvalues
     
     def getRECarray(self):
-        return self.__TEC
-    
-    # def diagrams(self):
-    #     """
-    #     Generates diagrams to visualize the evolution of TEC values.
-    #     """
-    #     if not self.__TECvalues:
-    #         print("No data available for diagrams.")
-    #         return
-
-    #     plt.figure(figsize=(10, 6))
-    #     plt.plot(self.__TECvalues, marker='o', linestyle='-', color='red', label='TEC Evolution')
-    #     plt.title('TEC Evolution Over Time')
-    #     plt.xlabel('Time Step')
-    #     plt.ylabel('TEC Value')
-    #     plt.grid(True)
-    #     plt.legend()
-
-    #     # Salva il grafico su file
-    #     plt.tight_layout()
-    #     filename = f"tec_evolution_{self.name}.png"  # Usa il nome ECU per personalizzare il file
-    #     plt.savefig(filename)
-    #     print(f"Diagram saved to {filename}")
-
+        return self.__RECvalues
