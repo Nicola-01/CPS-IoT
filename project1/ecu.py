@@ -20,17 +20,17 @@ class ECU:
     __ERROR_ACTIVE_FLAG = [0b0] * 6
     __ERROR_PASSIVE_FLAG = [0b1] * 6
 
-    __TEC = 0
-    __REC = 0
-    __status = ERROR_ACTIVE
-    __TECvalues = [0]
-    __RECvalues = [0]
-
     def __init__(self, name, canBus: 'CanBus', frame: 'Frame', clock : 'GlobalClock'):
         self.name = name
         self.canBus = canBus
         self.frame = frame
         self.clock = clock
+
+        self.__TEC = 0
+        self.__REC = 0
+        self.__status = self.ERROR_ACTIVE
+        self.__TECvalues = [0]
+        self.__RECvalues = [0]
 
     def sendFrame(self):
 
