@@ -14,7 +14,7 @@ class ECU:
     # Transmission status
     COMPLITED = "COMPLITED"
     DIFFERENT_ID = "DIFFERENT_ID"
-    FLAG_SENDED = "FLAG_SENDED"
+    BIT_ERROR = "BIT_ERROR"
     STUFF_ERROR = "STUFF_ERROR"
 
     __ERROR_ACTIVE_FLAG = [0b0] * 6
@@ -54,6 +54,7 @@ class ECU:
             recivedBit.append(lastSendedBit)
             if self.__checkStuffRule(recivedBit):
                 self.__sendError()
+                self.__TECincrease()
                 return self.STUFF_ERROR
 
             print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
@@ -65,42 +66,45 @@ class ECU:
             elif i > 11:
                 if frameBits[i] != lastSendedBit:
                     self.__sendError()
-                    self.TECincrease()
-                    return self.FLAG_SENDED
+                    self.__TECincrease()
+                    # TODO: retransission
+                    self.__TECdecrease()
+                    return self.BIT_ERROR
                 
             i += 1
             if len(frameBits) == i:
+                self.__TECdecrease()
                 return self.COMPLITED
             self.clock.wait()
     
     def checkBound(self, errorCounter):
         return errorCounter >= 0 # and errorCounter <= 300
 
-    def TECincrease(self):
+    def __TECincrease(self):
         if not self.checkBound(self.__TEC):
             return
         self.__TEC += 8
         self.__TECvalues.append(self.__TEC)
         self.errorStatus()
 
-    def TECdecrease(self):
+    def __TECdecrease(self):
         if not self.checkBound(self.__TEC):
             return
-        self.__TEC-=1
+        self.__TEC -= 1
         self.__TECvalues.append(self.__TEC)
         self.errorStatus()
 
-    def RECincrease(self):
+    def __RECincrease(self):
         if not self.checkBound(self.__REC):
             return
-        self.__REC+=1
+        self.__REC += 8
         self.__RECvalues.append(self.__REC)
         self.errorStatus()
 
-    def RECdecrease(self):
+    def __RECdecrease(self):
         if not self.checkBound(self.__REC):
             return
-        self.__REC-=1
+        self.__REC -= 1
         self.__RECvalues.append(self.__REC)
         self.errorStatus()
 
@@ -109,7 +113,7 @@ class ECU:
             self.__status = self.ERROR_PASSIVE
         if self.__TEC <= 127 and self.__REC <= 127:
             self.__status = self.ERROR_ACTIVE
-        if self.__TEC > 255:
+        if self.__TEC > 20:
             self.__status = self.BUS_OFF
 
     def getTEC(self):
@@ -118,10 +122,10 @@ class ECU:
     def getStatus(self):
         return self.__status
     
-    def getTECarray(self):
+    def getTECs(self):
         return self.__TECvalues
     
-    def getRECarray(self):
+    def getRECs(self):
         return self.__RECvalues
     
     def __checkStuffRule(self, recivedBit : list):

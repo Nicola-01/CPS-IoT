@@ -41,32 +41,26 @@ def ecuThread(name, index, canBus: 'CanBus', frame: 'Frame'):
         if ecu.getStatus() == ECU.BUS_OFF:
             stop_event.set()  # Segnala a tutti i thread di fermarsi
             print(f"{name} entered BUS_OFF. Stopping all threads.")
-            TECarr[index] = ecu.getTECarray()
-            RECarr[index] = ecu.getRECarray()
+            TECarr[index] = ecu.getTECs()
+            RECarr[index] = ecu.getRECs()
 
-def plot_graph(tec_data, rec_data):
-    """
-    Funzione per generare il grafico con i dati TEC e REC.
-    """
+def plot_graph(tec_data):
+
     plt.figure(figsize=(10, 6))
 
-    # Grafico per TEC
-    plt.subplot(2, 1, 1)
-    plt.plot(tec_data, label='TEC')
+    # Grafico per TEC sovrapposto
+    plt.plot(tec_data[0], label='Victim TEC', linestyle='-', marker='o')
+    plt.plot(tec_data[1], label='Attacker TEC', linestyle='--', marker='x')
     plt.xlabel('Time')
     plt.ylabel('TEC Value')
+    plt.title('TEC Values of Victim and Attacker')
     plt.legend()
-
-    # Grafico per REC
-    plt.subplot(2, 1, 2)
-    plt.plot(rec_data, label='REC')
-    plt.xlabel('Time')
-    plt.ylabel('REC Value')
-    plt.legend()
+    plt.grid(True)
 
     # Mostra il grafico
     plt.tight_layout()
     plt.show()
+
 
 def canBusThread(canBus: 'CanBus'):
     # clock.wait()
@@ -106,6 +100,6 @@ if __name__ == "__main__":
 
     print("All threads stopped.")
 
-    plot_graph(TECarr[0], RECarr[0])
+    plot_graph(TECarr)
 
     # attacker_thread.start()
