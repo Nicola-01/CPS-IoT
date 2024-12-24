@@ -31,7 +31,7 @@ class CanBus:
         else:
             self.frame.append(self.current_bit)
             
-        print(f"Frame recived  {self.frame}\n status {self.status}")
+        # print(f"Frame recived  {self.frame}\n status {self.status}")
 
         self.lastSendedBit = self.current_bit
         self.current_bit = 0b1
@@ -52,7 +52,7 @@ class CanBus:
         self.status = self.IDLE
         self.idle_event.set() 
 
-        print("CanBus to IDLE")
+        # print("CanBus to IDLE")
 
     def getStatus(self):
         return self.status

@@ -45,7 +45,7 @@ class ECU:
 
         while True:
             self.canBus.transmitBit(frameBits[i])
-            print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}\n")
+            # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}\n")
             
             self.clock.wait()
             self.clock.wait()
@@ -57,7 +57,8 @@ class ECU:
                 self.__TECincrease()
                 return self.STUFF_ERROR
 
-            print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
+            # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
+            # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
 
             if i >= 1 and i <= 11: # check the id
                 if frameBits[i] != lastSendedBit:
@@ -65,10 +66,14 @@ class ECU:
 
             elif i > 11:
                 if frameBits[i] != lastSendedBit:
+                    # if(self.__TEC>=120):
+                    #     print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
                     self.__sendError()
                     self.__TECincrease()
                     # TODO: retransission
-                    self.__TECdecrease()
+                    if self.__TEC != 128 and self.__status == self.ERROR_PASSIVE:
+                        self.__TECdecrease()
+
                     return self.BIT_ERROR
                 
             i += 1
@@ -113,7 +118,7 @@ class ECU:
             self.__status = self.ERROR_PASSIVE
         if self.__TEC <= 127 and self.__REC <= 127:
             self.__status = self.ERROR_ACTIVE
-        if self.__TEC > 20:
+        if self.__TEC > 255:
             self.__status = self.BUS_OFF
 
     def getTEC(self):
@@ -144,7 +149,8 @@ class ECU:
         else: 
             error_flag = self.__ERROR_PASSIVE_FLAG
 
-        print(f"{self.name} flag sended {error_flag}")
+        # if self.__TEC >= 120:
+        #     print(f"tec: {self.__TEC} {self.name} flag sended {error_flag}")
 
         for bit in error_flag:
             self.canBus.transmitBit(bit)
