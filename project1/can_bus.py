@@ -5,24 +5,36 @@ class CanBus:
     IDLE = "IDLE"
     ACTIVE = "ACTIVE"
     WAIT = "WAIT"
+
+    
     
     def __init__(self, clock : 'GlobalClock'):
-        self.clock = clock
-        self.lock = threading.Lock()
-        self.idle_event = threading.Event()
+        # self.__clock = clock
+        self.__lock = threading.Lock()
+        self.idleEvent = threading.Event()
+        self.retransmitEvent = threading.Event()
+
+        self.__requiredRetransmit = 0
 
         self.clearBus()
         
     def transmitBit(self, bit):
-        with self.lock:
+        with self.__lock:
             # print(f"recived {bit}")
             self.status = self.ACTIVE
             self.current_bit &= bit
 
-            self.idle_event.clear()
+            self.idleEvent.clear()
+            self.retransmitEvent.clear()
             self.lastSendedFrame = []
 
     def nextBit(self):
+
+        if self.__requiredRetransmit > 0 and self.status == self.IDLE:
+            self.status = self.IDLE
+            self.idleEvent.clear() 
+            self.retransmitEvent.set()
+            self.__requiredRetransmit -= 1
 
         if self.status == self.WAIT: # 2 cycles without new bit 
             self.lastSendedFrame = self.frame
@@ -50,9 +62,13 @@ class CanBus:
         self.frame = []
 
         self.status = self.IDLE
-        self.idle_event.set() 
+        self.idleEvent.set() 
 
         # print("CanBus to IDLE")
 
     def getStatus(self):
         return self.status
+    
+    def requiredRetransmitedRet(self):
+        with self.__lock:
+            self.__requiredRetransmit += 1

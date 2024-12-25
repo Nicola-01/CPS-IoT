@@ -72,8 +72,11 @@ class ECU:
                     #     print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
                     self.__sendError()
                     self.__TECincrease()
-                    # TODO: retransission
-                    if self.__TEC != 128 and self.__status == self.ERROR_PASSIVE:
+
+                    # retransission
+                    if self.__status == self.ERROR_PASSIVE:
+                        self.__canBus.requiredRetransmitedRet()
+                        self.__canBus.retransmitEvent.wait()
                         self.__TECdecrease()
 
                     return self.BIT_ERROR

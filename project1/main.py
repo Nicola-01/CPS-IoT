@@ -29,7 +29,7 @@ def attacker(canBus: 'CanBus', frame: 'Frame'):
         # while canBus.getStatus() != canBus.IDLE:
         #     print("Attacker wait")
         #     clock.wait() 
-        canBus.idle_event.wait()
+        canBus.idleEvent.wait()
         clock.wait()
         clock.wait()
         '''
@@ -50,7 +50,7 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
             clock.wait()
         count += 1 
 
-        canBus.idle_event.wait()
+        canBus.idleEvent.wait()
         clock.wait() #sync
         clock.wait()
 
@@ -144,11 +144,11 @@ if __name__ == "__main__":
 
     canBus_thread = threading.Thread(target=canBusThread, args=(canBus,))
     ecu_threads = [
-        threading.Thread(target=ecuThread, args=("Victim", 0, 5, canBus, victimFrame)),
-        threading.Thread(target=ecuThread, args=("Attacker", 1, 5, canBus, attackerFrame)),
-        threading.Thread(target=ecuThread, args=("ECU1", 2, 3, canBus, ECU1Frame)),
-        threading.Thread(target=ecuThread, args=("ECU2", 3, 4, canBus, ECU2Frame)),
-        threading.Thread(target=ecuThread, args=("ECU3", 4, 7, canBus, ECU3Frame))
+        threading.Thread(target=ecuThread, args=("Victim", 0, 7, canBus, victimFrame)),
+        threading.Thread(target=ecuThread, args=("Attacker", 1, 7, canBus, attackerFrame)),
+        threading.Thread(target=ecuThread, args=("ECU1", 2, 8, canBus, ECU1Frame)),
+        threading.Thread(target=ecuThread, args=("ECU2", 3, 8, canBus, ECU2Frame)),
+        threading.Thread(target=ecuThread, args=("ECU3", 4, 8, canBus, ECU3Frame))
     ]
     
     for i in range(len(ecu_threads)):
