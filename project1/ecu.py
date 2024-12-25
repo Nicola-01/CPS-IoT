@@ -81,6 +81,7 @@ class ECU:
             i += 1
             if len(frameBits) == i:
                 self.__TECdecrease()
+                self.__TECvalues.append([self.__TEC, time.time() - self.__start])
                 return self.COMPLITED
             self.__clock.wait()
     
