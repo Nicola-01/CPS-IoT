@@ -7,12 +7,12 @@ from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-PERIOD = 0.0001  # seconds
+CLOCK = 0.0001  # seconds
 
 ECUstopSignal = threading.Event()
 CanBusStopSignal = threading.Event()
 
-TECarr = [[], []]
+TECarr = []
 # RECarr = [[], []]
 
 # Assuming Start is set at the beginning of the execution
@@ -34,7 +34,7 @@ def attacker(canBus: 'CanBus', frame: 'Frame'):
         clock.wait()
         '''
 
-def ecuThread(name, index, canBus: 'CanBus', frame: 'Frame'):
+def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
     ecu = ECU(name, canBus, frame, clock, START)
     print(f"{name} frame {frame.getBits()}")
     while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
@@ -57,22 +57,40 @@ def ecuThread(name, index, canBus: 'CanBus', frame: 'Frame'):
 
 def plot_graph(tec_data):
     # Check if the input data is in the correct format
-    if len(tec_data) != 2 or len(tec_data[0]) == 0 or len(tec_data[1]) == 0:
-        print("Error: TEC data is not in the correct format or empty.")
-        return
+    # if len(tec_data) != 2 or len(tec_data[0]) == 0 or len(tec_data[1]) == 0:
+    #     print("Error: TEC data is not in the correct format or empty.")
+    #     return
 
     # Extract time and TEC values for Victim and Attacker
-    victim_tec = [item[0] for item in tec_data[0]]
-    victim_time = [item[1] * 1000 for item in tec_data[0]]  # Convert seconds to milliseconds
+    # victim_tec = [item[0] for item in tec_data[0]]
+    # victim_time = [item[1] * 1000 for item in tec_data[0]]  # Convert seconds to milliseconds
 
-    attacker_tec = [item[0] for item in tec_data[1]]
-    attacker_time = [item[1] * 1000 for item in tec_data[1]]  # Convert seconds to milliseconds
+    # attacker_tec = [item[0] for item in tec_data[1]]
+    # attacker_time = [item[1] * 1000 for item in tec_data[1]]  # Convert seconds to milliseconds
 
     plt.figure(figsize=(10, 6))
 
-    # Plot TEC values for both Victim and Attacker
-    plt.plot(victim_time, victim_tec, label='Victim\'s TEC', linestyle='-')
-    plt.plot(attacker_time, attacker_tec, label='Adversary\'s TEC', linestyle='-.')
+    for i, data in enumerate(tec_data):
+        tec = [item[0] for item in data]
+        time = [item[1] * 1000 for item in data]
+
+        lable = ""
+        if i == 0:
+            lable = "Victim\'s TEC"
+        elif i == 1:
+            lable = "Adversary\'s TEC"
+        else:
+            lable = f"ECU {i-1}"
+
+        plt.plot(time, tec, label=lable, linestyle='-')
+
+    
+
+    # plt.figure(figsize=(10, 6))
+
+    # plt.plot(victim_time, victim_tec, label='Victim\'s TEC', linestyle='-')
+    # # Plot TEC values for both Victim and Attacker
+    # plt.plot(attacker_time, attacker_tec, label='Adversary\'s TEC', linestyle='-.')
 
     # Add labels and title
     plt.xlabel('Time (ms)')
@@ -107,7 +125,7 @@ def canBusThread(canBus: 'CanBus'):
 
 
 if __name__ == "__main__":
-    clock = GlobalClock(PERIOD)
+    clock = GlobalClock(CLOCK)
     clock_thread = threading.Thread(target=clock.start)
     clock_thread.start()
 
@@ -117,9 +135,15 @@ if __name__ == "__main__":
 
     canBus_thread = threading.Thread(target=canBusThread, args=(canBus,))
     ecu_threads = [
-        threading.Thread(target=ecuThread, args=("Victim", 0, canBus, victimFrame)),
-        threading.Thread(target=ecuThread, args=("Attacker", 1, canBus, attackerFrame))
+        threading.Thread(target=ecuThread, args=("Victim", 0, 1, canBus, victimFrame)),
+        threading.Thread(target=ecuThread, args=("Attacker", 1, 1, canBus, attackerFrame))
+        # threading.Thread(target=ecuThread, args=("ECU1", 2, 3, canBus, ECU1Frame)),
+        # threading.Thread(target=ecuThread, args=("ECU2", 3, 4, canBus, ECU2Frame)),
+        # threading.Thread(target=ecuThread, args=("ECU3", 4, 7, canBus, ECU3Frame)),
         ]
+    
+    for i in range(len(ecu_threads)):
+        TECarr.append([])
 
     # attacker_thread = threading.Thread(target=attacker, args=(canBus, attackerFrame))
 
