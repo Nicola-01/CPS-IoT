@@ -39,7 +39,7 @@ def ecuThread(name, index, canBus: 'CanBus', frame: 'Frame'):
     print(f"{name} frame {frame.getBits()}")
     while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
         tranmitedStatus = ecu.sendFrame()
-        print(f" tranmitedStatus {tranmitedStatus} \n current {name} TEC {ecu.getTEC()}")
+        print(f"{name}: tranmitedStatus {tranmitedStatus}; TEC {ecu.getTEC()}")
         
         # Append TEC value along with the time difference since Start
         # TECarr[index].append([ecu.getTEC(), time.time() - START])

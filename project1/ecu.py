@@ -84,36 +84,31 @@ class ECU:
                 return self.COMPLITED
             self.__clock.wait()
     
-    def checkBound(self, errorCounter):
-        return errorCounter >= 0 # and errorCounter <= 300
-
     def __TECincrease(self):
-        if not self.checkBound(self.__TEC):
-            return
         self.__TEC += 8
         self.__TECvalues.append([self.__TEC, time.time() - self.__start])
         self.errorStatus()
 
     def __TECdecrease(self):
-        if not self.checkBound(self.__TEC):
+        if self.__TEC < 1:
             return
         self.__TEC -= 1
         self.__TECvalues.append([self.__TEC, time.time() - self.__start])
         self.errorStatus()
 
-    def __RECincrease(self):
-        if not self.checkBound(self.__REC):
-            return
-        self.__REC += 8
-        self.__RECvalues.append([self.__REC, time.time() - self.__start])
-        self.errorStatus()
+    # def __RECincrease(self):
+    #     if not self.checkBound(self.__REC):
+    #         return
+    #     self.__REC += 8
+    #     self.__RECvalues.append([self.__REC, time.time() - self.__start])
+    #     self.errorStatus()
 
-    def __RECdecrease(self):
-        if not self.checkBound(self.__REC):
-            return
-        self.__REC -= 1
-        self.__RECvalues.append([self.__REC, time.time() - self.__start])
-        self.errorStatus()
+    # def __RECdecrease(self):
+    #     if not self.checkBound(self.__REC):
+    #         return
+    #     self.__REC -= 1
+    #     self.__RECvalues.append([self.__REC, time.time() - self.__start])
+    #     self.errorStatus()
 
     def errorStatus(self):
         if self.__TEC > 127 or self.__REC > 127:
