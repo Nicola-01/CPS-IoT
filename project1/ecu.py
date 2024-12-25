@@ -1,121 +1,161 @@
 from frame import Frame
 from can_bus import CanBus
+from global_clock import GlobalClock
+import time
+
 import matplotlib.pyplot as plt
 
 class ECU:
-    ERROR_ACTIVE = 0
-    ERROR_PASSIVE = 1
-    BUS_OFF = 2
 
-    ERROR_ACTIVE_FLAG = 0b000000
-    ERROR_PASSIVE_FLAG = 0b111111
+    # ECU status
+    ERROR_ACTIVE = "ERROR_ACTIVE"
+    ERROR_PASSIVE = "ERROR_PASSIVE"
+    BUS_OFF = "BUS_OFF"
 
-    TEC = 0
-    REC = 0
-    status = ERROR_ACTIVE
-    TECvalues = []
-    RECvalues = []
+    # Transmission status
+    COMPLITED = "COMPLITED"
+    LOWER_FRAME_ID = "LOWER_FRAME_ID"
+    BIT_ERROR = "BIT_ERROR"
+    STUFF_ERROR = "STUFF_ERROR"
 
-    def __init__(self, name, canBus: 'CanBus', frame: 'Frame'):
+    __ERROR_ACTIVE_FLAG = [0b0] * 6
+    __ERROR_PASSIVE_FLAG = [0b1] * 6
+
+    def __init__(self, name, canBus: 'CanBus', frame: 'Frame', clock : 'GlobalClock', start : float):
         self.name = name
-        self.canBus = canBus
-        self.frame = frame
+        self.__canBus = canBus
+        self.__frame = frame
+        self.__clock = clock
+        self.__start = start
+
+        self.__TEC = 0
+        self.__REC = 0
+        self.__status = self.ERROR_ACTIVE
+        self.__TECvalues = [[0,0]]
+        self.__RECvalues = [[0,0]]
 
     def sendFrame(self):
-        self.canBus.sendFrameOnBus(self.frame)
 
-    def checkCanBusFrame(self):
-        canBusFrame = self.canBus.getSendedFrame()
-        ecuFrameBits = self.frame.getBits()
-        if canBusFrame[1:12] == canBusFrame[1:12]: # check if is the same ID
-            if canBusFrame != ecuFrameBits: # than check the msg
-                # TODO: send error flag
-                self.TECincrease()
-                # print(f"Mismatch detected {self.name}:\nCAN Bus Frame: {canBusFrame}\nECU Frame Bits: {ecuFrameBits}")
-            else:
-                self.TECdecrease()
+        recivedBit = []
+
+        if self.__status == self.BUS_OFF:
+            return
+
+        i = 0
+
+        frameBits = self.__frame.getBits()
+
+        while True:
+            self.__canBus.transmitBit(frameBits[i])
+            # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}\n")
+            
+            self.__clock.wait()
+            self.__clock.wait()
+            lastSendedBit = self.__canBus.getSendedBit()
+
+            recivedBit.append(lastSendedBit)
+            if self.__checkStuffRule(recivedBit):
+                self.__sendError()
+                self.__TECincrease()
+                return self.STUFF_ERROR
+
+            # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
+            # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
+
+            if i >= 1 and i <= 11: # check the id
+                if frameBits[i] > lastSendedBit:
+                    return self.LOWER_FRAME_ID # different id, stop transmission
+
+            elif i > 11:
+                if frameBits[i] != lastSendedBit:
+                    # if(self.__TEC>=120):
+                    #     print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
+                    self.__sendError()
+                    self.__TECincrease()
+                    # TODO: retransission
+                    if self.__TEC != 128 and self.__status == self.ERROR_PASSIVE:
+                        self.__TECdecrease()
+
+                    return self.BIT_ERROR
+                
+            i += 1
+            if len(frameBits) == i:
+                self.__TECdecrease()
+                return self.COMPLITED
+            self.__clock.wait()
     
     def checkBound(self, errorCounter):
-        return errorCounter >= 0 and errorCounter <= 255
+        return errorCounter >= 0 # and errorCounter <= 300
 
-    def TECincrease(self):
-        if self.checkBound(self.TEC):
+    def __TECincrease(self):
+        if not self.checkBound(self.__TEC):
             return
-        self.TEC += 8
-        self.TECvalues.append(self.TEC)
+        self.__TEC += 8
+        self.__TECvalues.append([self.__TEC, time.time() - self.__start])
         self.errorStatus()
 
-    def TECdecrease(self):
-        if self.checkBound(self.TEC):
+    def __TECdecrease(self):
+        if not self.checkBound(self.__TEC):
             return
-        self.TEC-=1
-        self.TECvalues.append(self.TEC)
+        self.__TEC -= 1
+        self.__TECvalues.append([self.__TEC, time.time() - self.__start])
         self.errorStatus()
 
-    def RECincrease(self):
-        if self.checkBound(self.REC):
+    def __RECincrease(self):
+        if not self.checkBound(self.__REC):
             return
-        self.REC+=1
-        self.RECvalues.append(self.REC)
+        self.__REC += 8
+        self.__RECvalues.append([self.__REC, time.time() - self.__start])
         self.errorStatus()
 
-    def RECdecrease(self):
-        if self.checkBound(self.REC):
+    def __RECdecrease(self):
+        if not self.checkBound(self.__REC):
             return
-        self.REC-=1
-        self.RECvalues.append(self.REC)
+        self.__REC -= 1
+        self.__RECvalues.append([self.__REC, time.time() - self.__start])
         self.errorStatus()
 
     def errorStatus(self):
-        if self.TEC > 127 or self.REC > 127:
-            self.status = self.ERROR_PASSIVE
-        elif self.TEC <= 127 and self.REC <= 127:
-            self.status = self.ERROR_ACTIVE
-        elif self.TEC > 255:
-            self.status = self.BUS_OFF
+        if self.__TEC > 127 or self.__REC > 127:
+            self.__status = self.ERROR_PASSIVE
+        if self.__TEC <= 127 and self.__REC <= 127:
+            self.__status = self.ERROR_ACTIVE
+        if self.__TEC > 255:
+            self.__status = self.BUS_OFF
 
     def getTEC(self):
-        return self.TEC
+        return self.__TEC
 
     def getStatus(self):
-        return self.status
+        return self.__status
     
-    def diagrams(self):
-        """
-        Generates diagrams to visualize the evolution of TEC and REC values.
-        - The first plot shows the changes in TEC over time.
-        - The second plot shows the changes in REC over time.
-        """
+    def getTECs(self):
+        return self.__TECvalues
+    
+    def getRECs(self):
+        return self.__RECvalues
+    
+    def __checkStuffRule(self, recivedBit : list):
+        if len(recivedBit) < 6:
+            return False
 
+        sum = 0
+        for bit in recivedBit[-6:][::-1]: # check only last 6
+            sum += bit
+        
+        return (sum == 0 or sum == 6) # 6 bits to 0 or 6 bits to 1
+    
+    def __sendError(self):
+        if self.__status == self.ERROR_ACTIVE:
+            error_flag = self.__ERROR_ACTIVE_FLAG
+        else: 
+            error_flag = self.__ERROR_PASSIVE_FLAG
 
-        # Check if there are any values to plot
-        if not self.TECvalues and not self.RECvalues:
-            print("No data available for diagrams.")
-            return
+        # if self.__TEC >= 120:
+        #     print(f"tec: {self.__TEC} {self.name} flag sended {error_flag}")
 
-        # Create a figure with two subplots
-        fig, axs = plt.subplots(2, 1, figsize=(10, 8))
-
-        # Plot TEC evolution
-        if self.TECvalues:
-            axs[0].plot(self.TECvalues, marker='o', linestyle='-', color='red', label='TEC')
-            axs[0].set_title('TEC Evolution Over Time')
-            axs[0].set_xlabel('Time Step')
-            axs[0].set_ylabel('TEC Value')
-            axs[0].grid(True)
-            axs[0].legend()
-
-        # Plot REC evolution
-        if self.RECvalues:
-            axs[1].plot(self.RECvalues, marker='o', linestyle='-', color='blue', label='REC')
-            axs[1].set_title('REC Evolution Over Time')
-            axs[1].set_xlabel('Time Step')
-            axs[1].set_ylabel('REC Value')
-            axs[1].grid(True)
-            axs[1].legend()
-
-        # Adjust layout to avoid overlap
-        plt.tight_layout()
-
-        # Display the plots
-        plt.show()
+        for bit in error_flag:
+            self.__canBus.transmitBit(bit)
+            self.__clock.wait()
+            self.__clock.wait()
+            self.__clock.wait()

@@ -1,52 +1,58 @@
 import threading
-from frame import Frame
+from global_clock import GlobalClock
 
 class CanBus:
-    def __init__(self):
-        self.frames = []
-        self.lastSendedFrame = None
+    IDLE = "IDLE"
+    ACTIVE = "ACTIVE"
+    WAIT = "WAIT"
+    
+    def __init__(self, clock : 'GlobalClock'):
+        self.clock = clock
         self.lock = threading.Lock()
+        self.idle_event = threading.Event()
 
-    def sendFrameOnBus(self, frame: 'Frame'):
+        self.clearBus()
+        
+    def transmitBit(self, bit):
         with self.lock:
-            self.frames.append(frame)
+            # print(f"recived {bit}")
+            self.status = self.ACTIVE
+            self.current_bit &= bit
 
-    def process(self):
-        with self.lock:
-            if len(self.frames) == 0:
-                return
+            self.idle_event.clear()
+            self.lastSendedFrame = []
 
-            self.removeInvalidFrames()
-            lowerID = self.getLowerID()
-            self.onlyFramesWithID(lowerID)
+    def nextBit(self):
 
-            framesBits = [frame.getBits() for frame in self.frames]
-            maxLength = max(len(frame) for frame in framesBits)
+        if self.status == self.WAIT: # 2 cycles without new bit 
+            self.lastSendedFrame = self.frame
+            self.clearBus()
+            return
+        else:
+            self.frame.append(self.current_bit)
+            
+        # print(f"Frame recived  {self.frame}\n status {self.status}")
 
-            frameSended = []
-
-            for i in range(maxLength):
-                frameSended.append(1)  # Default recessive bit
-
-                for j in range(len(framesBits)):
-                    if j < len(framesBits[j]):
-                        frameSended[i] &= framesBits[j][i]  # Dominant bits win
-
-            print(f"Processed frame bits: {frameSended}")
-            self.lastSendedFrame = frameSended
+        self.lastSendedBit = self.current_bit
+        self.current_bit = 0b1
+        self.status = self.WAIT
 
     def getSendedFrame(self):
         return self.lastSendedFrame
+    
+    def getSendedBit(self):
+        return self.lastSendedBit
 
     def clearBus(self):
-        self.frames = []
+        self.current_bit = 0b1
+        self.lastSendedBit = 0b1
 
-    def removeInvalidFrames(self):
-        """Rimuove i frame con SOF diverso da 0b0."""
-        self.frames = [frame for frame in self.frames if frame.SOF == 0b0]
+        self.frame = []
 
-    def getLowerID(self):
-        return min(frame.ID for frame in self.frames)
+        self.status = self.IDLE
+        self.idle_event.set() 
 
-    def onlyFramesWithID(self, ID):
-        self.frames = [frame for frame in self.frames if frame.ID == ID]
+        # print("CanBus to IDLE")
+
+    def getStatus(self):
+        return self.status
