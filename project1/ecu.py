@@ -1,6 +1,7 @@
 from frame import Frame
 from can_bus import CanBus
 from global_clock import GlobalClock
+import time
 
 import matplotlib.pyplot as plt
 
@@ -13,24 +14,25 @@ class ECU:
 
     # Transmission status
     COMPLITED = "COMPLITED"
-    DIFFERENT_ID = "DIFFERENT_ID"
+    LOWER_FRAME_ID = "LOWER_FRAME_ID"
     BIT_ERROR = "BIT_ERROR"
     STUFF_ERROR = "STUFF_ERROR"
 
     __ERROR_ACTIVE_FLAG = [0b0] * 6
     __ERROR_PASSIVE_FLAG = [0b1] * 6
 
-    def __init__(self, name, canBus: 'CanBus', frame: 'Frame', clock : 'GlobalClock'):
+    def __init__(self, name, canBus: 'CanBus', frame: 'Frame', clock : 'GlobalClock', start : float):
         self.name = name
-        self.canBus = canBus
-        self.frame = frame
-        self.clock = clock
+        self.__canBus = canBus
+        self.__frame = frame
+        self.__clock = clock
+        self.__start = start
 
         self.__TEC = 0
         self.__REC = 0
         self.__status = self.ERROR_ACTIVE
-        self.__TECvalues = [0]
-        self.__RECvalues = [0]
+        self.__TECvalues = [[0,0]]
+        self.__RECvalues = [[0,0]]
 
     def sendFrame(self):
 
@@ -41,15 +43,15 @@ class ECU:
 
         i = 0
 
-        frameBits = self.frame.getBits()
+        frameBits = self.__frame.getBits()
 
         while True:
-            self.canBus.transmitBit(frameBits[i])
+            self.__canBus.transmitBit(frameBits[i])
             # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}\n")
             
-            self.clock.wait()
-            self.clock.wait()
-            lastSendedBit = self.canBus.getSendedBit()
+            self.__clock.wait()
+            self.__clock.wait()
+            lastSendedBit = self.__canBus.getSendedBit()
 
             recivedBit.append(lastSendedBit)
             if self.__checkStuffRule(recivedBit):
@@ -61,8 +63,8 @@ class ECU:
             # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
 
             if i >= 1 and i <= 11: # check the id
-                if frameBits[i] != lastSendedBit:
-                    return self.DIFFERENT_ID # different id, stop transmission
+                if frameBits[i] > lastSendedBit:
+                    return self.LOWER_FRAME_ID # different id, stop transmission
 
             elif i > 11:
                 if frameBits[i] != lastSendedBit:
@@ -80,7 +82,7 @@ class ECU:
             if len(frameBits) == i:
                 self.__TECdecrease()
                 return self.COMPLITED
-            self.clock.wait()
+            self.__clock.wait()
     
     def checkBound(self, errorCounter):
         return errorCounter >= 0 # and errorCounter <= 300
@@ -89,28 +91,28 @@ class ECU:
         if not self.checkBound(self.__TEC):
             return
         self.__TEC += 8
-        self.__TECvalues.append(self.__TEC)
+        self.__TECvalues.append([self.__TEC, time.time() - self.__start])
         self.errorStatus()
 
     def __TECdecrease(self):
         if not self.checkBound(self.__TEC):
             return
         self.__TEC -= 1
-        self.__TECvalues.append(self.__TEC)
+        self.__TECvalues.append([self.__TEC, time.time() - self.__start])
         self.errorStatus()
 
     def __RECincrease(self):
         if not self.checkBound(self.__REC):
             return
         self.__REC += 8
-        self.__RECvalues.append(self.__REC)
+        self.__RECvalues.append([self.__REC, time.time() - self.__start])
         self.errorStatus()
 
     def __RECdecrease(self):
         if not self.checkBound(self.__REC):
             return
         self.__REC -= 1
-        self.__RECvalues.append(self.__REC)
+        self.__RECvalues.append([self.__REC, time.time() - self.__start])
         self.errorStatus()
 
     def errorStatus(self):
@@ -153,7 +155,7 @@ class ECU:
         #     print(f"tec: {self.__TEC} {self.name} flag sended {error_flag}")
 
         for bit in error_flag:
-            self.canBus.transmitBit(bit)
-            self.clock.wait()
-            self.clock.wait()
-            self.clock.wait()
+            self.__canBus.transmitBit(bit)
+            self.__clock.wait()
+            self.__clock.wait()
+            self.__clock.wait()

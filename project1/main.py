@@ -7,15 +7,16 @@ from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-PERIOD = 0.01  # seconds
+PERIOD = 0.0001  # seconds
 
-stop_event = threading.Event()
+ECUstopSignal = threading.Event()
+CanBusStopSignal = threading.Event()
 
 TECarr = [[], []]
 # RECarr = [[], []]
 
 # Assuming Start is set at the beginning of the execution
-Start = time.time()  # Use the current time as the starting point
+START = time.time()  # Use the current time as the starting point
 
 '''
 def attacker(canBus: 'CanBus', frame: 'Frame'):
@@ -34,25 +35,24 @@ def attacker(canBus: 'CanBus', frame: 'Frame'):
         '''
 
 def ecuThread(name, index, canBus: 'CanBus', frame: 'Frame'):
-    ecu = ECU(name, canBus, frame, clock)
+    ecu = ECU(name, canBus, frame, clock, START)
     print(f"{name} frame {frame.getBits()}")
-    while not stop_event.is_set() and ecu.getStatus() != ECU.BUS_OFF:
+    while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
         tranmitedStatus = ecu.sendFrame()
         print(f" tranmitedStatus {tranmitedStatus} \n current {name} TEC {ecu.getTEC()}")
         
         # Append TEC value along with the time difference since Start
-        TECarr[index].append([ecu.getTEC(), time.time() - Start])
-
+        # TECarr[index].append([ecu.getTEC(), time.time() - START])
         
         canBus.idle_event.wait()
         clock.wait()
         clock.wait()
 
         if ecu.getStatus() == ECU.BUS_OFF:
-            stop_event.set()  # Segnala a tutti i thread di fermarsi
+            ECUstopSignal.set()  # Segnala a tutti i thread di fermarsi
             print(f"{name} entered BUS_OFF. Stopping all threads.")
 
-    # TECarr[index] = ecu.getTECs()
+    TECarr[index] = ecu.getTECs()
     # RECarr[index] = ecu.getRECs()
 
 def plot_graph(tec_data):
@@ -63,10 +63,10 @@ def plot_graph(tec_data):
 
     # Extract time and TEC values for Victim and Attacker
     victim_tec = [item[0] for item in tec_data[0]]
-    victim_time = [item[1] for item in tec_data[0]]
+    victim_time = [item[1] * 1000 for item in tec_data[0]]  # Convert seconds to milliseconds
 
     attacker_tec = [item[0] for item in tec_data[1]]
-    attacker_time = [item[1] for item in tec_data[1]]
+    attacker_time = [item[1] * 1000 for item in tec_data[1]]  # Convert seconds to milliseconds
 
     plt.figure(figsize=(10, 6))
 
@@ -75,7 +75,7 @@ def plot_graph(tec_data):
     plt.plot(attacker_time, attacker_tec, label='Adversary\'s TEC', linestyle='-.')
 
     # Add labels and title
-    plt.xlabel('Time (s)')
+    plt.xlabel('Time (ms)')
     plt.ylabel('TEC Value')
     plt.title('TEC Values of Victim and Attacker')
 
@@ -89,14 +89,14 @@ def plot_graph(tec_data):
     plt.tight_layout()
 
     # Print the TEC data for debugging
-    print("TEC Data:", tec_data)
+    # print("TEC Data:", tec_data)
 
     # Display the graph
     plt.show()
 
 def canBusThread(canBus: 'CanBus'):
     # clock.wait()
-    while not stop_event.is_set():
+    while not CanBusStopSignal.is_set():
         # print("canBus")
         clock.wait()
         canBus.nextBit()
@@ -128,7 +128,8 @@ if __name__ == "__main__":
 
     for thread in ecu_threads:
         thread.join()
-    canBus_thread.join()
+
+    CanBusStopSignal.set() # wait all threads to stop canbus 
 
     print("All threads stopped.")
 
