@@ -21,18 +21,17 @@ class ECU:
     __ERROR_ACTIVE_FLAG = [0b0] * 6
     __ERROR_PASSIVE_FLAG = [0b1] * 6
 
-    def __init__(self, name, canBus: 'CanBus', frame: 'Frame', clock : 'GlobalClock', start : float):
+    def __init__(self, name, canBus: 'CanBus', frame: 'Frame', clock : 'GlobalClock'):
         self.name = name
         self.__canBus = canBus
         self.__frame = frame
         self.__clock = clock
-        self.__start = start
 
         self.__TEC = 0
         self.__REC = 0
         self.__status = self.ERROR_ACTIVE
-        self.__TECvalues = [[0,0]]
-        self.__RECvalues = [[0,0]]
+        self.__TECvalues = [[0,time.time()]]
+        # self.__RECvalues = [[0,0]]
 
     def sendFrame(self):
 
@@ -79,34 +78,34 @@ class ECU:
             i += 1
             if len(frameBits) == i:
                 self.__TECdecrease()
-                self.__TECvalues.append([self.__TEC, time.time() - self.__start])
+                self.__TECvalues.append([self.__TEC, time.time()])
                 return self.COMPLITED
             self.__clock.wait()
     
     def __TECincrease(self):
         self.__TEC += 8
-        self.__TECvalues.append([self.__TEC, time.time() - self.__start])
+        self.__TECvalues.append([self.__TEC, time.time()])
         self.errorStatus()
 
     def __TECdecrease(self):
         if self.__TEC < 1:
             return
         self.__TEC -= 1
-        self.__TECvalues.append([self.__TEC, time.time() - self.__start])
+        self.__TECvalues.append([self.__TEC, time.time()])
         self.errorStatus()
 
     # def __RECincrease(self):
     #     if not self.checkBound(self.__REC):
     #         return
     #     self.__REC += 8
-    #     self.__RECvalues.append([self.__REC, time.time() - self.__start])
+    #     self.__RECvalues.append([self.__REC, time.time()])
     #     self.errorStatus()
 
     # def __RECdecrease(self):
     #     if not self.checkBound(self.__REC):
     #         return
     #     self.__REC -= 1
-    #     self.__RECvalues.append([self.__REC, time.time() - self.__start])
+    #     self.__RECvalues.append([self.__REC, time.time()])
     #     self.errorStatus()
 
     def errorStatus(self):
