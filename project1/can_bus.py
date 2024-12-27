@@ -5,8 +5,7 @@ class CanBus:
     IDLE = "IDLE"
     ACTIVE = "ACTIVE"
     WAIT = "WAIT"
-
-    
+    __count = 0
     
     def __init__(self, clock : 'GlobalClock'):
         self.__clock = clock
@@ -16,6 +15,7 @@ class CanBus:
 
         self.__requiredRetransmit = 0
 
+        self.__lastSendedFrame = []
         self.clearBus()
         
     def transmitBit(self, bit):
@@ -26,7 +26,6 @@ class CanBus:
 
             self.idleEvent.clear()
             self.retransmitEvent.clear()
-            self.lastSendedFrame = []
 
     def nextBit(self):
         with self.__lock:
@@ -37,8 +36,9 @@ class CanBus:
                 self.__requiredRetransmit -= 1
                 # self.__clock.wait()
 
-            if self.status == self.WAIT: # 2 cycles without new bit 
-                self.lastSendedFrame = self.frame
+            if self.status == self.WAIT: # 2 cycles without new bit, transmiton finished
+                self.__lastSendedFrame = self.frame
+                self.__count+=1
                 self.clearBus()
                 # print("---CANBUS IDLE---")
                 return
@@ -47,26 +47,24 @@ class CanBus:
                 
             # print(f"Frame recived  {self.frame}\n status {self.status}")
 
-            self.lastSendedBit = self.current_bit
+            self.__lastSendedBit = self.current_bit
             self.current_bit = 0b1
             self.status = self.WAIT
 
     def getSendedFrame(self):
-        return self.lastSendedFrame
+        return self.__lastSendedFrame
     
     def getSendedBit(self):
-        return self.lastSendedBit
+        return self.__lastSendedBit
 
     def clearBus(self):
         self.current_bit = 0b1
-        self.lastSendedBit = 0b1
+        self.__lastSendedBit = 0b1
 
         self.frame = []
 
         self.status = self.IDLE
         self.idleEvent.set() 
-
-        # print("CanBus to IDLE")
 
     def getStatus(self):
         return self.status
@@ -74,3 +72,6 @@ class CanBus:
     def requiredRetransmitedRet(self):
         with self.__lock:
             self.__requiredRetransmit += 1
+
+    def getCount(self):
+        return self.__count
