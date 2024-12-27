@@ -40,7 +40,7 @@ class CanBus:
                 self.__lastSendedFrame = self.frame
                 self.__count+=1
                 self.clearBus()
-                # print("---CANBUS IDLE---")
+                print("---CANBUS IDLE---")
                 return
             else:
                 self.frame.append(self.current_bit)

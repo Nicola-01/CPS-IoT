@@ -9,7 +9,7 @@ from frame import Frame
 from global_clock import GlobalClock
 
 CLOCK = 0.005  # seconds
-CLOCK = 0.5  # seconds
+CLOCK = 0.05  # seconds
 ECU_NUMBER = 0 # (without count Victim and Adversary)
 
 ECUname = ["Victim", "Adversary"]
@@ -58,7 +58,7 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
 
         while canBus.idleEvent.is_set() and abs(((time.time() - startTime)) % (period)) > period/10: # 10% of period
             pass
-
+        
         clock.wait() #sync
         clock.wait()
         
@@ -106,10 +106,10 @@ def canBusThread(canBus: 'CanBus'):
     while not CanBusStopSignal.is_set():
         clock.wait()
         canBus.nextBit()
+        print(f" --- canBus nextBit, status: {canBus.getStatus()}")
 
         clock.wait()
         clock.wait()
-        print("canBus cicle, status: ", canBus.getStatus())
 
 
 if __name__ == "__main__":

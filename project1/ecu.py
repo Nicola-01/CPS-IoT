@@ -53,6 +53,7 @@ class ECU:
             self.__clock.wait()
             lastSendedBit = self.__canBus.getSendedBit()
 
+            # check
             recivedBit.append(lastSendedBit)
             if self.__checkStuffRule(recivedBit):
                 self.__sendError()
