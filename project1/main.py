@@ -1,3 +1,4 @@
+import random
 import time
 import threading
 import matplotlib.pyplot as plt
@@ -8,11 +9,13 @@ from frame import Frame
 from global_clock import GlobalClock
 
 CLOCK = 0.001  # seconds
+ECU_NUMBER = 0 # (without count Victim and Adversary)
 
+ECUname = ["Victim", "Adversary"]
 ECUstopSignal = threading.Event()
 CanBusStopSignal = threading.Event()
 
-TECarr = []
+TECarr = [[], []]
 # RECarr = [[], []]
 
 # Assuming Start is set at the beginning of the execution
@@ -79,18 +82,9 @@ def plot_graph(tec_data):
         tec = [item[0] for item in data]
         time = [item[1] * 1000 for item in data]
 
-        lable = ""
-        if i == 0:
-            lable = "Victim\'s TEC"
-        elif i == 1:
-            lable = "Adversary\'s TEC"
-        else:
-            lable = f"ECU {i-1}"
-
-        plt.plot(time, tec, label=lable, linestyle='-')
+        plt.plot(time, tec, label=ECUname[i], linestyle='-')
 
     
-
     # plt.figure(figsize=(10, 6))
 
     # plt.plot(victim_time, victim_tec, label='Victim\'s TEC', linestyle='-')
@@ -100,7 +94,7 @@ def plot_graph(tec_data):
     # Add labels and title
     plt.xlabel('Time (ms)')
     plt.ylabel('TEC Value')
-    plt.title('TEC Values of Victim and Attacker')
+    plt.title('TEC Values over time')
 
     # Show legend
     plt.legend()
@@ -130,6 +124,9 @@ def canBusThread(canBus: 'CanBus'):
 
 
 if __name__ == "__main__":
+    
+    random.seed()
+
     clock = GlobalClock(CLOCK)
     clock_thread = threading.Thread(target=clock.start)
     clock_thread.start()
@@ -138,29 +135,32 @@ if __name__ == "__main__":
     victimFrame = Frame(0b01010101010, 2, [255, 255])
     attackerFrame = Frame(0b01010101010, 2, [64, 64])
 
-    ECU1Frame = Frame(0b01011101010, 2, [255, 255])
-    ECU2Frame = Frame(0b01110101010, 2, [255, 255])
-    ECU3Frame = Frame(0b01011101010, 2, [255, 255])
-
     canBus_thread = threading.Thread(target=canBusThread, args=(canBus,))
     ecu_threads = [
-        threading.Thread(target=ecuThread, args=("Victim", 0, 5, canBus, victimFrame)),
-        threading.Thread(target=ecuThread, args=("Attacker", 1, 5, canBus, attackerFrame)),
-        threading.Thread(target=ecuThread, args=("ECU1", 2, 3, canBus, ECU1Frame)),
-        threading.Thread(target=ecuThread, args=("ECU2", 3, 4, canBus, ECU2Frame)),
-        threading.Thread(target=ecuThread, args=("ECU3", 4, 7, canBus, ECU3Frame))
-    ]
-    
-    for i in range(len(ecu_threads)):
+        threading.Thread(target=ecuThread, args=(ECUname[0], 0, 5, canBus, victimFrame)),
+        threading.Thread(target=ecuThread, args=(ECUname[1], 1, 5, canBus, attackerFrame))
+        ]
+
+    for i in range(ECU_NUMBER):
+        id = random.randint(0b01010101011, 0b11111111111)
+        dlc = random.randint(1, 4) # real valure max ->8 , decreese for increese speed in transmission
+        data = []
+        for j in range(dlc):
+            data.append(random.randint(0, 255))
+        
+        frame = Frame(id, dlc, data)
+        period = random.randint(5, 10)
+        ECUname.append(f"ECU{i+1}")
         TECarr.append([])
+
+        ecu_threads.append(threading.Thread(target=ecuThread, args=(ECUname[-1], i+2, period, canBus, frame)))
 
     # attacker_thread = threading.Thread(target=attacker, args=(canBus, attackerFrame))
 
     canBus_thread.start()
     for thread in ecu_threads: thread.start() 
 
-    for thread in ecu_threads:
-        thread.join()
+    for thread in ecu_threads: thread.join()
 
     CanBusStopSignal.set() # wait all threads to stop canbus 
 
