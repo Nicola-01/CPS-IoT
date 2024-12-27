@@ -38,17 +38,24 @@ def attacker(canBus: 'CanBus', frame: 'Frame'):
 
 def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
     ecu = ECU(name, canBus, frame, clock, START)
-    print(f"{name:<11}:\tFrame {frame}")
+    print(f"{name:<11} period: {period:<5} \tFrame {frame}")
 
     startTime = time.time()
+    
+    previusSend = None
 
 
     while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
 
-        nextSend = startTime + (period * round((time.time() - startTime) / period))
-
-        while time.time() < nextSend:
+        while not canBus.idleEvent.is_set() and abs(((time.time() - startTime)) % (period)) > period/10: # 10% of period
             pass
+        
+        # if previusSend == None:
+        #     previusSend = time.time()
+        # else:
+        #     send = time.time()
+        #     print(f"time to send {send-previusSend}")
+        #     previusSend = send
 
         tranmitedStatus = ecu.sendFrame()
         if tranmitedStatus != ECU.LOWER_FRAME_ID:
@@ -107,8 +114,8 @@ if __name__ == "__main__":
 
     canBus_thread = threading.Thread(target=canBusThread, args=(canBus,))
     ecu_threads = [
-        threading.Thread(target=ecuThread, args=(ECUname[1], 1, CLOCK * 5, canBus, victimFrame)),
-        threading.Thread(target=ecuThread, args=(ECUname[0], 0, CLOCK * 5, canBus, attackerFrame))
+        threading.Thread(target=ecuThread, args=(ECUname[1], 1, 0.1, canBus, victimFrame)),
+        threading.Thread(target=ecuThread, args=(ECUname[0], 0, 0.1, canBus, attackerFrame))
         ]
 
     for i in range(ECU_NUMBER):
