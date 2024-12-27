@@ -8,9 +8,9 @@ from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-CLOCK = 0.003  # seconds
+CLOCK = 0.001  # seconds
 # CLOCK = 0.02  # seconds
-ECU_NUMBER = 0 # (without count Victim and Adversary)
+ECU_NUMBER = 2 # (without count Victim and Adversary)
 
 ECUname = ["Victim", "Adversary"]
 ECUstopSignal = threading.Event()
@@ -40,47 +40,49 @@ def attacker(canBus: 'CanBus', frame: 'Frame'):
 
 def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
     ecu = ECU(name, canBus, frame, clock, START)
-    print(f"{name} frame {frame}")
+    print(f"{name:<11}:\tFrame {frame}")
 
-
-    count = 0
+    lastSend = time.time()
     while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
-        if count == period:
-            tranmitedStatus = ecu.sendFrame()
-            if tranmitedStatus != ECU.LOWER_FRAME_ID:
-                print(f"{name}: tranmitedStatus {tranmitedStatus}; TEC {ecu.getTEC()}")
-            if tranmitedStatus == ECU.BIT_ERROR:
-                print(f"{name}: Retransmitting due to BIT_ERROR")
-                canBus.idleEvent.wait()
-                clock.wait() #sync
-                clock.wait()
 
-                continue # ritrasmette subito senza aspettare il period
-
-                # canBus.requiredRetransmitedRet()
-
-                # canBus.retransmitEvent.wait()
-                # print(f"{name}:ret")
-                # clock.wait() #sync
-                # clock.wait()
-                # clock.wait()
-                # print("aaaa")
-                
-
-            count = -1
-        else:
+        while time.time() - lastSend < period:
+            clock.wait()
             clock.wait()
 
-        count += 1 
-        t = time.time()
-        canBus.idleEvent.wait()
-        print(time.time() - t)
-        clock.wait() #sync
-        clock.wait()
+        lastSend = time.time()
+        tranmitedStatus = ecu.sendFrame()
+        if tranmitedStatus != ECU.LOWER_FRAME_ID:
 
+            print(f"{name:<11}:\ttranmitedStatus {tranmitedStatus:<15} TEC {ecu.getTEC():<3} {ecu.getStatus()}")
         if ecu.getStatus() == ECU.BUS_OFF:
             ECUstopSignal.set()  # Segnala a tutti i thread di fermarsi
             print(f"{name} entered BUS_OFF. Stopping all threads.")
+
+        if tranmitedStatus == ECU.BIT_ERROR:
+            # print(f"{name}: \tRetransmitting due to BIT_ERROR")
+            canBus.idleEvent.wait()
+            clock.wait() #sync
+            clock.wait()
+
+            continue # ritrasmette subito senza aspettare il period
+
+            # canBus.requiredRetransmitedRet()
+
+            # canBus.retransmitEvent.wait()
+            # print(f"{name}:ret")
+            # clock.wait() #sync
+            # clock.wait()
+            # clock.wait()
+            # print("aaaa")
+
+            # else:
+            #     clock.wait()
+
+        canBus.idleEvent.wait()
+        clock.wait() #sync
+        clock.wait()
+
+
 
     TECarr[index] = ecu.getTECs()
 
@@ -158,8 +160,8 @@ if __name__ == "__main__":
 
     canBus_thread = threading.Thread(target=canBusThread, args=(canBus,))
     ecu_threads = [
-        threading.Thread(target=ecuThread, args=(ECUname[0], 0, 5, canBus, victimFrame)),
-        threading.Thread(target=ecuThread, args=(ECUname[1], 1, 5, canBus, attackerFrame))
+        threading.Thread(target=ecuThread, args=(ECUname[0], 0, CLOCK * 5, canBus, victimFrame)),
+        threading.Thread(target=ecuThread, args=(ECUname[1], 1, CLOCK * 5, canBus, attackerFrame))
         ]
 
     for i in range(ECU_NUMBER):
@@ -170,7 +172,7 @@ if __name__ == "__main__":
             data.append(random.randint(0, 255))
         
         frame = Frame(id, dlc, data)
-        period = random.randint(5, 10)
+        period = CLOCK * random.randint(8, 12)
         ECUname.append(f"ECU{i+1}")
         TECarr.append([])
 
