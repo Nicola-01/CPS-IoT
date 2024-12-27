@@ -8,7 +8,7 @@ from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-CLOCK = 0.001  # seconds
+CLOCK = 0.01  # seconds
 # CLOCK = 0.02  # seconds
 ECU_NUMBER = 0 # (without count Victim and Adversary)
 
@@ -46,9 +46,6 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
 
 
     while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
-
-        while not canBus.idleEvent.is_set() and abs(((time.time() - startTime)) % (period)) > period/10: # 10% of period
-            pass
         
         # if previusSend == None:
         #     previusSend = time.time()
@@ -58,18 +55,23 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
         #     previusSend = send
 
         tranmitedStatus = ecu.sendFrame()
-        if tranmitedStatus != ECU.LOWER_FRAME_ID:
+        # if tranmitedStatus != ECU.LOWER_FRAME_ID:
 
-            print(f"{name:<11}:\ttranmitedStatus {tranmitedStatus:<15} TEC {ecu.getTEC():<3} {ecu.getStatus()}")
+        print(f"{name:<11}:\ttranmitedStatus {tranmitedStatus:<15} TEC {ecu.getTEC():<3} {ecu.getStatus()}")
         if ecu.getStatus() == ECU.BUS_OFF:
             ECUstopSignal.set()  # Segnala a tutti i thread di fermarsi
             print(f"{name} entered BUS_OFF. Stopping all threads.")
 
         # todo retransmition
 
-        canBus.idleEvent.wait()
+        # canBus.idleEvent.wait()
+        
+        while not canBus.idleEvent.is_set() and canBus.getCount() % period == 0:
+            clock.wait() #sync
+            
         clock.wait() #sync
         clock.wait()
+
 
     TECarr[index] = ecu.getTECs()
 
@@ -114,8 +116,8 @@ if __name__ == "__main__":
 
     canBus_thread = threading.Thread(target=canBusThread, args=(canBus,))
     ecu_threads = [
-        threading.Thread(target=ecuThread, args=(ECUname[1], 1, 0.1, canBus, victimFrame)),
-        threading.Thread(target=ecuThread, args=(ECUname[0], 0, 0.1, canBus, attackerFrame))
+        threading.Thread(target=ecuThread, args=(ECUname[0], 0, 1, canBus, victimFrame)),
+        threading.Thread(target=ecuThread, args=(ECUname[1], 1, 1, canBus, attackerFrame))
         ]
 
     for i in range(ECU_NUMBER):
