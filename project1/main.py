@@ -8,7 +8,8 @@ from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-CLOCK = 0.001  # seconds
+CLOCK = 0.003  # seconds
+# CLOCK = 0.02  # seconds
 ECU_NUMBER = 0 # (without count Victim and Adversary)
 
 ECUname = ["Victim", "Adversary"]
@@ -39,21 +40,41 @@ def attacker(canBus: 'CanBus', frame: 'Frame'):
 
 def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
     ecu = ECU(name, canBus, frame, clock, START)
-    print(f"{name} frame {frame.getBits()}")
+    print(f"{name} frame {frame}")
+
 
     count = 0
     while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
-
         if count == period:
             tranmitedStatus = ecu.sendFrame()
             if tranmitedStatus != ECU.LOWER_FRAME_ID:
                 print(f"{name}: tranmitedStatus {tranmitedStatus}; TEC {ecu.getTEC()}")
+            if tranmitedStatus == ECU.BIT_ERROR:
+                print(f"{name}: Retransmitting due to BIT_ERROR")
+                canBus.idleEvent.wait()
+                clock.wait() #sync
+                clock.wait()
+
+                continue # ritrasmette subito senza aspettare il period
+
+                # canBus.requiredRetransmitedRet()
+
+                # canBus.retransmitEvent.wait()
+                # print(f"{name}:ret")
+                # clock.wait() #sync
+                # clock.wait()
+                # clock.wait()
+                # print("aaaa")
+                
+
             count = -1
         else:
             clock.wait()
-        count += 1 
 
+        count += 1 
+        t = time.time()
         canBus.idleEvent.wait()
+        print(time.time() - t)
         clock.wait() #sync
         clock.wait()
 

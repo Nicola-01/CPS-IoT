@@ -73,11 +73,6 @@ class ECU:
                     self.__sendError()
                     self.__TECincrease()
 
-                    # retransission
-                    if self.__status == self.ERROR_PASSIVE:
-                        self.__canBus.requiredRetransmitedRet()
-                        self.__canBus.retransmitEvent.wait()
-                        self.__TECdecrease()
 
                     return self.BIT_ERROR
                 
