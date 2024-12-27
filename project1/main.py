@@ -10,16 +10,14 @@ from global_clock import GlobalClock
 
 CLOCK = 0.001  # seconds
 # CLOCK = 0.02  # seconds
-ECU_NUMBER = 2 # (without count Victim and Adversary)
+ECU_NUMBER = 0 # (without count Victim and Adversary)
 
 ECUname = ["Victim", "Adversary"]
 ECUstopSignal = threading.Event()
 CanBusStopSignal = threading.Event()
 
 TECarr = [[], []]
-# RECarr = [[], []]
 
-# Assuming Start is set at the beginning of the execution
 START = time.time()  # Use the current time as the starting point
 
 '''
@@ -42,14 +40,16 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
     ecu = ECU(name, canBus, frame, clock, START)
     print(f"{name:<11}:\tFrame {frame}")
 
-    lastSend = time.time()
+    startTime = time.time()
+
+
     while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
 
-        while time.time() - lastSend < period:
-            clock.wait()
-            clock.wait()
+        nextSend = startTime + (period * round((time.time() - startTime) / period))
 
-        lastSend = time.time()
+        while time.time() < nextSend:
+            pass
+
         tranmitedStatus = ecu.sendFrame()
         if tranmitedStatus != ECU.LOWER_FRAME_ID:
 
@@ -58,47 +58,15 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
             ECUstopSignal.set()  # Segnala a tutti i thread di fermarsi
             print(f"{name} entered BUS_OFF. Stopping all threads.")
 
-        if tranmitedStatus == ECU.BIT_ERROR:
-            # print(f"{name}: \tRetransmitting due to BIT_ERROR")
-            canBus.idleEvent.wait()
-            clock.wait() #sync
-            clock.wait()
-
-            continue # ritrasmette subito senza aspettare il period
-
-            # canBus.requiredRetransmitedRet()
-
-            # canBus.retransmitEvent.wait()
-            # print(f"{name}:ret")
-            # clock.wait() #sync
-            # clock.wait()
-            # clock.wait()
-            # print("aaaa")
-
-            # else:
-            #     clock.wait()
+        # todo retransmition
 
         canBus.idleEvent.wait()
         clock.wait() #sync
         clock.wait()
 
-
-
     TECarr[index] = ecu.getTECs()
 
 def plot_graph(tec_data):
-    # Check if the input data is in the correct format
-    # if len(tec_data) != 2 or len(tec_data[0]) == 0 or len(tec_data[1]) == 0:
-    #     print("Error: TEC data is not in the correct format or empty.")
-    #     return
-
-    # Extract time and TEC values for Victim and Attacker
-    # victim_tec = [item[0] for item in tec_data[0]]
-    # victim_time = [item[1] * 1000 for item in tec_data[0]]  # Convert seconds to milliseconds
-
-    # attacker_tec = [item[0] for item in tec_data[1]]
-    # attacker_time = [item[1] * 1000 for item in tec_data[1]]  # Convert seconds to milliseconds
-
     plt.figure(figsize=(10, 6))
 
     for i, data in enumerate(tec_data):
@@ -107,41 +75,20 @@ def plot_graph(tec_data):
 
         plt.plot(time, tec, label=ECUname[i], linestyle='-')
 
-    
-    # plt.figure(figsize=(10, 6))
-
-    # plt.plot(victim_time, victim_tec, label='Victim\'s TEC', linestyle='-')
-    # # Plot TEC values for both Victim and Attacker
-    # plt.plot(attacker_time, attacker_tec, label='Adversary\'s TEC', linestyle='-.')
-
-    # Add labels and title
     plt.xlabel('Time (ms)')
     plt.ylabel('TEC Value')
     plt.title('TEC Values over time')
-
-    # Show legend
     plt.legend()
-
-    # Add grid for better visualization
     plt.grid(True)
-
-    # Show the plot with tight layout
     plt.tight_layout()
 
-    # Print the TEC data for debugging
-    # print("TEC Data:", tec_data)
-
-    # Display the graph
     plt.show()
 
 def canBusThread(canBus: 'CanBus'):
-    # clock.wait()
     while not CanBusStopSignal.is_set():
-        # print("canBus")
         clock.wait()
         canBus.nextBit()
 
-        # print("-------------------------")
         clock.wait()
         clock.wait()
 
@@ -160,8 +107,8 @@ if __name__ == "__main__":
 
     canBus_thread = threading.Thread(target=canBusThread, args=(canBus,))
     ecu_threads = [
-        threading.Thread(target=ecuThread, args=(ECUname[0], 0, CLOCK * 5, canBus, victimFrame)),
-        threading.Thread(target=ecuThread, args=(ECUname[1], 1, CLOCK * 5, canBus, attackerFrame))
+        threading.Thread(target=ecuThread, args=(ECUname[1], 1, CLOCK * 5, canBus, victimFrame)),
+        threading.Thread(target=ecuThread, args=(ECUname[0], 0, CLOCK * 5, canBus, attackerFrame))
         ]
 
     for i in range(ECU_NUMBER):
