@@ -1,4 +1,5 @@
 import threading
+import time
 from global_clock import GlobalClock
 
 class CanBus:
@@ -44,12 +45,14 @@ class CanBus:
             #     self.__requiredRetransmit -= 1
                 # self.__clock.wait()
 
+            # CanBus to IDLE status
             if self.__status == self.WAIT: # 2 cycles without new bit 
                 self.__lastSendedFrame = self.__frame
                 self.clearBus()
                 self.__count+=1
                 self.__frameCountEvent.set()
             
+            # CanBus to WAIT status
             elif self.__status == self.ACTIVE:
                 self.__frame.append(self.__current_bit)
                 
@@ -110,7 +113,13 @@ class CanBus:
     def waitFrameCountIncreese(self):
         self.__frameCountEvent.wait()
         
+    # I tried to avoid to use this method, since is not correct that the CanBus  
     def waitFrameCountMultiple(self, period):
         while self.__count % period != 0:
             self.__clock.wait()
             self.__frameCountEvent.wait()
+            
+    def waiFrameCount(self, frameNumber):
+        while self.__count < frameNumber:
+            # self.__clock.wait()
+            time.sleep(0.001)

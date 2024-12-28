@@ -56,6 +56,7 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
     print(f"{name:<11} period: {period:<2} Frame {frame}")
     
     retransmission = False
+    lastFrameNumber = 0
 
     while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
         
@@ -69,7 +70,11 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
         #     # canBus.waitFrameCountIncreese()
             
         if not retransmission: # if retransmission is required, wait for the next period
-            canBus.waitFrameCountMultiple(period)   
+            canBus.waitFrameCountMultiple(period)  
+        else:
+            frameToWait = lastFrameNumber + 2
+            print(f"{name:<11} retransmission, wait frame {frameToWait}")
+            canBus.waiFrameCount(frameToWait) # wait for the next frame after the
             
         retransmission = False
         
@@ -79,11 +84,12 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
         canBus.waitIdleStatus()
         # print(f"{name:<11}: Sending frame")
         
-        print(f"start transmission {name}, at frameCount {canBus.getCount()}")
+        lastFrameNumber = canBus.getCount()
+        print(f"{name:<11} start transmission, frameCount {lastFrameNumber}")
         tranmitedStatus = ecu.sendFrame()
         # if tranmitedStatus != ECU.LOWER_FRAME_ID:
 
-        print(f"{name:<11}:\ttranmitedStatus {tranmitedStatus:<15} TEC {ecu.getTEC():<3} {ecu.getStatus():<13} frameCount {canBus.getCount()}")
+        print(f"{name:<11}:\ttranmitedStatus {tranmitedStatus:<15} TEC {ecu.getTEC():<3} {ecu.getStatus():<13} frameCount {lastFrameNumber}")
         if ecu.getStatus() == ECU.BUS_OFF:
             ECUstopSignal.set()  # Segnala a tutti i thread di fermarsi
             print(f"{name} entered BUS_OFF. Stopping all threads.")
@@ -91,10 +97,12 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
         # retransmition
         if tranmitedStatus == ECU.BIT_ERROR:
             retransmission = True
+            continue
         
+        canBus.waitIdleStatus()
         clock.wait() #sync
-        # canBus.waitIdleStatus()
-        canBus.waitFrameCountIncreese()
+        clock.wait() #sync
+        # canBus.waitFrameCountIncreese()
         # clock.wait()
         # clock.wait()
         # canBus.waitIdleStatus()
