@@ -11,7 +11,7 @@ from global_clock import GlobalClock
 CLOCK = 0.005  # seconds
 # CLOCK = 0.02  # seconds
 ECU_NUMBER = 0 # (without count Victim and Adversary)
-PERIOD = 3
+PERIOD = 5
 
 ECUname = ["Victim", "Adversary"]
 ECUstopSignal = threading.Event()
@@ -28,7 +28,7 @@ def attacker(canBus: 'CanBus'):
     victimFrame = None
     period = None
 
-    time.sleep(2)
+    # time.sleep(2)
 
     while True:
         clock.wait()
@@ -45,9 +45,7 @@ def attacker(canBus: 'CanBus'):
             # print(f" ---- victimFrameNumber: {victimFrameNumber};")
             victimFrame = frame
             frame = None
-            
-    # return
-            
+                        
     ecuThread(ECUname[1], 1, period, canBus, attackerFrame)
 
 def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
@@ -60,11 +58,15 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
         # print(f"canBus.getCount() {canBus.getCount()}")
         while canBus.getCount() % period != 0:
             # print(f"while canBus.getCount() {canBus.getCount()}")
+            # clock.wait()
             clock.wait()
-            # canBus.waitIdleStatus()
+            # canBus.waitFrameCountIncreese()
             
-        # print(f"canBus.getCount() {canBus.getCount()}")
+        print(f"{name:<11}: canBus.getCount() {canBus.getCount()}")
         
+        # clock.wait()
+        canBus.waitIdleStatus()
+        print(f"{name:<11}: Sending frame")
         
         tranmitedStatus = ecu.sendFrame()
         # if tranmitedStatus != ECU.LOWER_FRAME_ID:
@@ -78,8 +80,8 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
         
         clock.wait() #sync
         canBus.waitIdleStatus()
-        clock.wait()
-        canBus.waitIdleStatus()
+        # clock.wait()
+        # canBus.waitIdleStatus()
             
     TECarr[index] = ecu.getTECs()
 
@@ -136,7 +138,7 @@ if __name__ == "__main__":
             data.append(random.randint(0, 255))
         
         frame = Frame(id, dlc, data)
-        period = CLOCK * random.randint(8, 12)
+        period = random.randint(3, 7)
         ECUname.append(f"ECU{i+1}")
         TECarr.append([])
 
