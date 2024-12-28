@@ -8,120 +8,99 @@ from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-CLOCK = 0.001  # seconds
+CLOCK = 0.005  # seconds
+CLOCK = 0.02  # seconds
 ECU_NUMBER = 0 # (without count Victim and Adversary)
+PERIOD = 5
 
 ECUname = ["Victim", "Adversary"]
 ECUstopSignal = threading.Event()
 CanBusStopSignal = threading.Event()
 
 TECarr = [[], []]
-# RECarr = [[], []]
 
-# Assuming Start is set at the beginning of the execution
 START = time.time()  # Use the current time as the starting point
 
-'''
-def attacker(canBus: 'CanBus', frame: 'Frame'):
-    attackerECU = ECU("Attacker", canBus, frame, clock)
-    print(f"Attacker frame {frame.getBits()}")
-    while attackerECU.getStatus() != ECU.BUS_OFF:
-        # clock.wait()
-        tranmitedStatus = attackerECU.sendFrame()
-        print(f" tranmitedStatus {tranmitedStatus} \n current Attacker TEC {attackerECU.getTEC()}")
-        # while canBus.getStatus() != canBus.IDLE:
-        #     print("Attacker wait")
-        #     clock.wait() 
-        canBus.idle_event.wait()
-        clock.wait()
-        clock.wait()
-        '''
+def attacker(canBus: 'CanBus'):
+    frame = None
+
+    victimFrameNumber = None
+    victimFrame = None
+    period = None
+
+    time.sleep(2)
+
+    while True:
+        canBus.waitIdle()
+        frame = Frame.fromBits(bits=canBus.getSendedFrame())
+        if victimFrameNumber != None and victimFrameNumber < canBus.getCount() and victimFrame == frame:
+            period = canBus.getCount() - victimFrameNumber
+            print(f" ---- period: {period};")
+            break
+
+        if victimFrame == None and frame != None:
+            victimFrameNumber = canBus.getCount()
+            print(f" ---- victimFrameNumber: {victimFrameNumber};")
+            victimFrame = frame
+            frame = None
+            
+    return
+            
+    ecuThread(ECUname[1], 1, period, canBus, attackerFrame)
 
 def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
-    ecu = ECU(name, canBus, frame, clock, START)
-    print(f"{name} frame {frame.getBits()}")
+    clock.wait()
+    ecu = ECU(name, canBus, frame, clock)
+    print(f"{name:<11} period: {period:<2} Frame {frame}")
 
-    count = 0
     while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
-
-        if count == period:
-            tranmitedStatus = ecu.sendFrame()
-            if tranmitedStatus != ECU.LOWER_FRAME_ID:
-                print(f"{name}: tranmitedStatus {tranmitedStatus}; TEC {ecu.getTEC()}")
-            count = -1
-        else:
+        
+        # print(f"canBus.getCount() {canBus.getCount()}")
+        while canBus.getCount() % period != 0:
+            # print(f"while canBus.getCount() {canBus.getCount()}")
             clock.wait()
-        count += 1 
-
-        canBus.idle_event.wait()
+        
+        canBus.waitIdle()
         clock.wait() #sync
         clock.wait()
+        
+        tranmitedStatus = ecu.sendFrame()
+        # if tranmitedStatus != ECU.LOWER_FRAME_ID:
 
+        print(f"{name:<11}:\ttranmitedStatus {tranmitedStatus:<15} TEC {ecu.getTEC():<3} {ecu.getStatus()}")
         if ecu.getStatus() == ECU.BUS_OFF:
             ECUstopSignal.set()  # Segnala a tutti i thread di fermarsi
             print(f"{name} entered BUS_OFF. Stopping all threads.")
 
+        # todo retransmition
+            
     TECarr[index] = ecu.getTECs()
 
+def canBusThread(canBus: 'CanBus'):
+    while not CanBusStopSignal.is_set():
+        clock.wait()
+        canBus.nextBit()
+
+        clock.wait()
+        clock.wait()
+
 def plot_graph(tec_data):
-    # Check if the input data is in the correct format
-    # if len(tec_data) != 2 or len(tec_data[0]) == 0 or len(tec_data[1]) == 0:
-    #     print("Error: TEC data is not in the correct format or empty.")
-    #     return
-
-    # Extract time and TEC values for Victim and Attacker
-    # victim_tec = [item[0] for item in tec_data[0]]
-    # victim_time = [item[1] * 1000 for item in tec_data[0]]  # Convert seconds to milliseconds
-
-    # attacker_tec = [item[0] for item in tec_data[1]]
-    # attacker_time = [item[1] * 1000 for item in tec_data[1]]  # Convert seconds to milliseconds
-
     plt.figure(figsize=(10, 6))
 
     for i, data in enumerate(tec_data):
         tec = [item[0] for item in data]
-        time = [item[1] * 1000 for item in data]
+        time = [(item[1] - START) * 1000 for item in data]
 
         plt.plot(time, tec, label=ECUname[i], linestyle='-')
 
-    
-    # plt.figure(figsize=(10, 6))
-
-    # plt.plot(victim_time, victim_tec, label='Victim\'s TEC', linestyle='-')
-    # # Plot TEC values for both Victim and Attacker
-    # plt.plot(attacker_time, attacker_tec, label='Adversary\'s TEC', linestyle='-.')
-
-    # Add labels and title
     plt.xlabel('Time (ms)')
     plt.ylabel('TEC Value')
     plt.title('TEC Values over time')
-
-    # Show legend
     plt.legend()
-
-    # Add grid for better visualization
     plt.grid(True)
-
-    # Show the plot with tight layout
     plt.tight_layout()
 
-    # Print the TEC data for debugging
-    # print("TEC Data:", tec_data)
-
-    # Display the graph
     plt.show()
-
-def canBusThread(canBus: 'CanBus'):
-    # clock.wait()
-    while not CanBusStopSignal.is_set():
-        # print("canBus")
-        clock.wait()
-        canBus.nextBit()
-
-        # print("-------------------------")
-        clock.wait()
-        clock.wait()
-
 
 if __name__ == "__main__":
     
@@ -137,8 +116,8 @@ if __name__ == "__main__":
 
     canBus_thread = threading.Thread(target=canBusThread, args=(canBus,))
     ecu_threads = [
-        threading.Thread(target=ecuThread, args=(ECUname[0], 0, 5, canBus, victimFrame)),
-        threading.Thread(target=ecuThread, args=(ECUname[1], 1, 5, canBus, attackerFrame))
+        threading.Thread(target=ecuThread, args=(ECUname[0], 0, PERIOD, canBus, victimFrame)),
+        threading.Thread(target=attacker, args=(canBus,))
         ]
 
     for i in range(ECU_NUMBER):
@@ -149,7 +128,7 @@ if __name__ == "__main__":
             data.append(random.randint(0, 255))
         
         frame = Frame(id, dlc, data)
-        period = random.randint(5, 10)
+        period = CLOCK * random.randint(8, 12)
         ECUname.append(f"ECU{i+1}")
         TECarr.append([])
 

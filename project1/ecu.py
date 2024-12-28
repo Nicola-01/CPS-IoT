@@ -21,21 +21,19 @@ class ECU:
     __ERROR_ACTIVE_FLAG = [0b0] * 6
     __ERROR_PASSIVE_FLAG = [0b1] * 6
 
-    def __init__(self, name, canBus: 'CanBus', frame: 'Frame', clock : 'GlobalClock', start : float):
+    def __init__(self, name, canBus: 'CanBus', frame: 'Frame', clock : 'GlobalClock'):
         self.name = name
         self.__canBus = canBus
         self.__frame = frame
         self.__clock = clock
-        self.__start = start
 
         self.__TEC = 0
         self.__REC = 0
         self.__status = self.ERROR_ACTIVE
-        self.__TECvalues = [[0,0]]
-        self.__RECvalues = [[0,0]]
+        self.__TECvalues = [[0,time.time()]]
+        # self.__RECvalues = [[0,0]]
 
     def sendFrame(self):
-
         recivedBit = []
 
         if self.__status == self.BUS_OFF:
@@ -47,7 +45,7 @@ class ECU:
 
         while True:
             self.__canBus.transmitBit(frameBits[i])
-            # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}\n")
+            # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}")
             
             self.__clock.wait()
             self.__clock.wait()
@@ -59,8 +57,7 @@ class ECU:
                 self.__TECincrease()
                 return self.STUFF_ERROR
 
-            # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
-            # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
+            # print(f"{self.name:<10} i:{i:<2}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}")
 
             if i >= 1 and i <= 11: # check the id
                 if frameBits[i] > lastSendedBit:
@@ -72,43 +69,41 @@ class ECU:
                     #     print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}\n")
                     self.__sendError()
                     self.__TECincrease()
-                    # TODO: retransission
-                    if self.__TEC != 128 and self.__status == self.ERROR_PASSIVE:
-                        self.__TECdecrease()
+
 
                     return self.BIT_ERROR
                 
             i += 1
             if len(frameBits) == i:
                 self.__TECdecrease()
-                self.__TECvalues.append([self.__TEC, time.time() - self.__start])
+                self.__TECvalues.append([self.__TEC, time.time()])
                 return self.COMPLITED
             self.__clock.wait()
     
     def __TECincrease(self):
         self.__TEC += 8
-        self.__TECvalues.append([self.__TEC, time.time() - self.__start])
+        self.__TECvalues.append([self.__TEC, time.time()])
         self.errorStatus()
 
     def __TECdecrease(self):
         if self.__TEC < 1:
             return
         self.__TEC -= 1
-        self.__TECvalues.append([self.__TEC, time.time() - self.__start])
+        self.__TECvalues.append([self.__TEC, time.time()])
         self.errorStatus()
 
     # def __RECincrease(self):
     #     if not self.checkBound(self.__REC):
     #         return
     #     self.__REC += 8
-    #     self.__RECvalues.append([self.__REC, time.time() - self.__start])
+    #     self.__RECvalues.append([self.__REC, time.time()])
     #     self.errorStatus()
 
     # def __RECdecrease(self):
     #     if not self.checkBound(self.__REC):
     #         return
     #     self.__REC -= 1
-    #     self.__RECvalues.append([self.__REC, time.time() - self.__start])
+    #     self.__RECvalues.append([self.__REC, time.time()])
     #     self.errorStatus()
 
     def errorStatus(self):
