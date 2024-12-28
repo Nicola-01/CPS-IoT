@@ -57,18 +57,11 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
 
     while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
         
-        clock.wait() #sync
-        clock.wait()
-        canBus.waitIdleStatus()
-        clock.wait()
-        canBus.waitIdleStatus()
-        
         # print(f"canBus.getCount() {canBus.getCount()}")
         while canBus.getCount() % period != 0:
             # print(f"while canBus.getCount() {canBus.getCount()}")
             clock.wait()
-            clock.wait()
-            canBus.waitIdleStatus()
+            # canBus.waitIdleStatus()
             
         # print(f"canBus.getCount() {canBus.getCount()}")
         
@@ -76,12 +69,17 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
         tranmitedStatus = ecu.sendFrame()
         # if tranmitedStatus != ECU.LOWER_FRAME_ID:
 
-        print(f"{name:<11}:\ttranmitedStatus {tranmitedStatus:<15} TEC {ecu.getTEC():<3} {ecu.getStatus()}; count {canBus.getCount()}")
+        print(f"{name:<11}:\ttranmitedStatus {tranmitedStatus:<15} TEC {ecu.getTEC():<3} {ecu.getStatus()}; frameCount {canBus.getCount()}")
         if ecu.getStatus() == ECU.BUS_OFF:
             ECUstopSignal.set()  # Segnala a tutti i thread di fermarsi
             print(f"{name} entered BUS_OFF. Stopping all threads.")
 
         # todo retransmition
+        
+        clock.wait() #sync
+        canBus.waitIdleStatus()
+        clock.wait()
+        canBus.waitIdleStatus()
             
     TECarr[index] = ecu.getTECs()
 
