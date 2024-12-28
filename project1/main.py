@@ -9,9 +9,9 @@ from frame import Frame
 from global_clock import GlobalClock
 
 CLOCK = 0.005  # seconds
-# CLOCK = 0.02  # seconds
+CLOCK = 0.02  # seconds
 ECU_NUMBER = 0 # (without count Victim and Adversary)
-PERIOD = 1
+PERIOD = 5
 
 ECUname = ["Victim", "Adversary"]
 ECUstopSignal = threading.Event()
@@ -26,12 +26,12 @@ def attacker(canBus: 'CanBus'):
 
     victimFrameNumber = None
     victimFrame = None
-    firstTransmition = None
     period = None
 
     time.sleep(2)
 
     while True:
+        canBus.waitIdle()
         frame = Frame.fromBits(bits=canBus.getSendedFrame())
         if victimFrameNumber != None and victimFrameNumber < canBus.getCount() and victimFrame == frame:
             period = canBus.getCount() - victimFrameNumber
@@ -40,27 +40,30 @@ def attacker(canBus: 'CanBus'):
 
         if victimFrame == None and frame != None:
             victimFrameNumber = canBus.getCount()
+            print(f" ---- victimFrameNumber: {victimFrameNumber};")
             victimFrame = frame
             frame = None
+            
+    return
             
     ecuThread(ECUname[1], 1, period, canBus, attackerFrame)
 
 def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
+    clock.wait()
     ecu = ECU(name, canBus, frame, clock)
-    print(f"{name:<11} period: {period:<5} \tFrame {frame}")
-
-    startTime = time.time()
-
+    print(f"{name:<11} period: {period:<2} Frame {frame}")
 
     while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
         
-        # if previusSend == None:
-        #     previusSend = time.time()
-        # else:
-        #     send = time.time()
-        #     print(f"time to send {send-previusSend}")
-        #     previusSend = send
-
+        # print(f"canBus.getCount() {canBus.getCount()}")
+        while canBus.getCount() % period != 0:
+            # print(f"while canBus.getCount() {canBus.getCount()}")
+            clock.wait()
+        
+        canBus.waitIdle()
+        clock.wait() #sync
+        clock.wait()
+        
         tranmitedStatus = ecu.sendFrame()
         # if tranmitedStatus != ECU.LOWER_FRAME_ID:
 
@@ -70,15 +73,16 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
             print(f"{name} entered BUS_OFF. Stopping all threads.")
 
         # todo retransmition
-
-        while canBus.getCount() % period != 0:
-            clock.wait()
             
-        canBus.idleEvent.wait()
-        clock.wait() #sync
-        clock.wait()
-
     TECarr[index] = ecu.getTECs()
+
+def canBusThread(canBus: 'CanBus'):
+    while not CanBusStopSignal.is_set():
+        clock.wait()
+        canBus.nextBit()
+
+        clock.wait()
+        clock.wait()
 
 def plot_graph(tec_data):
     plt.figure(figsize=(10, 6))
@@ -97,15 +101,6 @@ def plot_graph(tec_data):
     plt.tight_layout()
 
     plt.show()
-
-def canBusThread(canBus: 'CanBus'):
-    while not CanBusStopSignal.is_set():
-        clock.wait()
-        canBus.nextBit()
-
-        clock.wait()
-        clock.wait()
-
 
 if __name__ == "__main__":
     
