@@ -8,7 +8,7 @@ from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-CLOCK = 0.005  # seconds
+CLOCK = 0.01  # seconds
 # CLOCK = 0.02  # seconds
 ECU_NUMBER = 0 # (without count Victim and Adversary)
 PERIOD = 5
@@ -54,6 +54,8 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
     clock.wait()
     ecu = ECU(name, canBus, frame, clock)
     print(f"{name:<11} period: {period:<2} Frame {frame}")
+    
+    retransmission = False
 
     while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
         
@@ -66,7 +68,10 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
         #     time.sleep(0.001)
         #     # canBus.waitFrameCountIncreese()
             
-        canBus.waitFrameCountMultiple(period)   
+        if not retransmission: # if retransmission is required, wait for the next period
+            canBus.waitFrameCountMultiple(period)   
+            
+        retransmission = False
         
         # print(f"{name:<11}: post canBus.getCount() {canBus.getCount()}")
         
@@ -83,7 +88,9 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
             ECUstopSignal.set()  # Segnala a tutti i thread di fermarsi
             print(f"{name} entered BUS_OFF. Stopping all threads.")
 
-        # todo retransmition
+        # retransmition
+        if tranmitedStatus == ECU.BIT_ERROR:
+            retransmission = True
         
         clock.wait() #sync
         # canBus.waitIdleStatus()
