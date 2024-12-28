@@ -44,11 +44,10 @@ class ECU:
         frameBits = self.__frame.getBits()
 
         while True:
+            # print("ECU sendBit")
             self.__canBus.transmitBit(frameBits[i])
-            # print(f"{self.name}; i:{i}; frameBits[i]: {frameBits[i]}")
             
-            self.__clock.wait()
-            self.__clock.wait()
+            self.__canBus.waitWaitStatus()
             lastSendedBit = self.__canBus.getSendedBit()
 
             recivedBit.append(lastSendedBit)
@@ -57,7 +56,7 @@ class ECU:
                 self.__TECincrease()
                 return self.STUFF_ERROR
 
-            # print(f"{self.name:<10} i:{i:<2}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}")
+            # print(f"ECU ckeck {self.name:<10} i:{i:<2}; frameBits[i]: {frameBits[i]}; lastSendedBit: {lastSendedBit}")
 
             if i >= 1 and i <= 11: # check the id
                 if frameBits[i] > lastSendedBit:
