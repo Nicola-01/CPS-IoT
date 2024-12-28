@@ -9,9 +9,9 @@ from frame import Frame
 from global_clock import GlobalClock
 
 CLOCK = 0.005  # seconds
-CLOCK = 0.02  # seconds
+# CLOCK = 0.02  # seconds
 ECU_NUMBER = 0 # (without count Victim and Adversary)
-PERIOD = 5
+PERIOD = 1
 
 ECUname = ["Victim", "Adversary"]
 ECUstopSignal = threading.Event()
@@ -44,7 +44,7 @@ def attacker(canBus: 'CanBus'):
             victimFrame = frame
             frame = None
             
-    return
+    # return
             
     ecuThread(ECUname[1], 1, period, canBus, attackerFrame)
 
