@@ -109,3 +109,8 @@ class CanBus:
         
     def waitFrameCountIncreese(self):
         self.__frameCountEvent.wait()
+        
+    def waitFrameCountMultiple(self, period):
+        while self.__count % period != 0:
+            self.__clock.wait()
+            self.__frameCountEvent.wait()

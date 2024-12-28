@@ -19,6 +19,9 @@ class Frame:
         return f"Packet(SOF={self.__SOF}, ID={self.__ID}, DLC={self.__DLC}, Data={self.__Data}, EOF={self.__EOF})"
         # return f"Packet(SOF={self.__SOF}, ID={self.__ID}, DLC={self.__DLC}, Data={self.__Data}, CRC={self.__CRC}, ACK={self.__ACK}, EOF={self.__EOF})"
         
+    def getID(self):
+        return self.__ID    
+    
     def getBits(self):
         """Restituisce il frame come una lista di bit concatenati."""
         sof_bits = [self.__SOF]
