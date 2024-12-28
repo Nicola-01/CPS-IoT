@@ -13,6 +13,7 @@ class CanBus:
         self.__lock = threading.Lock()
         self.__count = 0
         self.__idleEvent = threading.Event()
+        self.__waitEvent = threading.Event()
         self.__retransmitEvent = threading.Event()
 
         self.__requiredRetransmit = 0
@@ -23,14 +24,16 @@ class CanBus:
     def transmitBit(self, bit):
         with self.__lock:
             # print(f"recived {bit}")
-            self.status = self.ACTIVE
-            self.current_bit &= bit
+            self.__status = self.ACTIVE
+            self.__current_bit &= bit
 
             self.__idleEvent.clear()
+            self.__waitEvent.clear()
             # self.retransmitEvent.clear()
 
     def nextBit(self):
         with self.__lock:
+            # print("CanBus nextBit")
             # if self.__requiredRetransmit > 0 and self.status == self.IDLE:
             #     print("---CANBUS RETRANSMITION---")
             #     self.idleEvent.clear() 
@@ -38,19 +41,25 @@ class CanBus:
             #     self.__requiredRetransmit -= 1
                 # self.__clock.wait()
 
-            if self.status == self.WAIT: # 2 cycles without new bit 
-                self.__lastSendedFrame = self.frame
-                self.__count+=1
+            if self.__status == self.WAIT: # 2 cycles without new bit 
+                self.__lastSendedFrame = self.__frame
                 self.clearBus()
+                self.__count+=1
             
-            elif self.status == self.ACTIVE:
-                self.frame.append(self.current_bit)
+            elif self.__status == self.ACTIVE:
+                self.__frame.append(self.__current_bit)
                 
-                self.__lastSendedBit = self.current_bit
-                self.current_bit = 0b1
-                self.status = self.WAIT
+                self.__lastSendedBit = self.__current_bit
+                self.__current_bit = 0b1
+                self.__status = self.WAIT
+                self.__waitEvent.set()
+                # print("CanBus to WAIT")
                 
-            self.__count+=1
+            elif self.__status == self.IDLE:
+                self.__lastSendedFrame = None
+                self.__count+=1
+                # print("CanBus in IDLE")
+            # print(f"CanBus __count: {self.__count}")
 
     def getSendedFrame(self):
         return self.__lastSendedFrame
@@ -59,18 +68,19 @@ class CanBus:
         return self.__lastSendedBit
 
     def clearBus(self):
-        self.current_bit = 0b1
+        self.__current_bit = 0b1
         self.__lastSendedBit = 0b1
 
-        self.frame = []
+        self.__frame = []
 
-        self.status = self.IDLE
+        self.__status = self.IDLE
         self.__idleEvent.set() 
+        self.__waitEvent.clear()
 
-        print("CanBus to IDLE")
+        # print("CanBus to IDLE")
 
     def getStatus(self):
-        return self.status
+        return self.__status
     
     def requiredRetransmitedRet(self):
         with self.__lock:
@@ -79,5 +89,8 @@ class CanBus:
     def getCount(self):
         return self.__count
     
-    def waitIdle(self):
+    def waitIdleStatus(self):
         self.__idleEvent.wait()
+        
+    def waitWaitStatus(self):
+        self.__waitEvent.wait()
