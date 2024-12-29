@@ -9,7 +9,6 @@ from frame import Frame
 from global_clock import GlobalClock
 
 CLOCK = 0.005  # seconds
-# CLOCK = 0.02  # seconds
 ECU_NUMBER = 0 # (without count Victim and Adversary)
 PERIOD = 5
 
@@ -114,18 +113,26 @@ def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
         clock.wait()
         canBus.waitIdleStatus()
         
-        # without this barrier, the adversary can start a cicle before the victim or vice versa
         
         # print(f"{name:<11}: adversaryTransmission {adversaryTransmission} victimTransmission {victimTransmission}")
         
+        # without this barrier, the adversary can start a cicle before the victim or vice versa
+        
+        lastFrameNumber = canBus.getCount()
+        if (lastFrameNumber == 0 and name != ECUname[VICTIM]):
+            continue
+        
         if (name in ECUname[:2] and adversaryStart and adversaryTransmission == victimTransmission):
             sync_barrier.wait()
+            
+        # clock.wait()
+        # canBus.waitIdleStatus()
         
         
         # print(f"{name:<11} stop waiting {time.time() - START}")
         # print(f"{name:<11}: Sending frame")
         
-        lastFrameNumber = canBus.getCount()
+
         # print(f"{name:<11} start transmission, frameCount {lastFrameNumber}, {time.time() - START}")
         tranmitedStatus = ecu.sendFrame()
         # if tranmitedStatus != ECU.LOWER_FRAME_ID:
