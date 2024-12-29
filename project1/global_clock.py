@@ -5,7 +5,7 @@ class GlobalClock:
     """
     A class to synchronize processes with periodic signals.
     """
-    def __init__(self, period):
+    def __init__(self, period: float):
         """
         Initialize the clock.
 

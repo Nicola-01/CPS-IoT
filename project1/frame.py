@@ -23,7 +23,7 @@ class Frame:
     # __CRC = None  # removed for semplicity
     # __ACK = 0     # removed for semplicity
 
-    def __init__(self, ID, dlc, data):
+    def __init__(self, ID: int, dlc: int, data: list):
         """
         Initialize a Frame instance.
 
@@ -36,15 +36,15 @@ class Frame:
         self.__DLC = dlc  
         self.__Data = data
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return a string representation of the frame."""
         return f"Packet(SOF={self.__SOF}, ID={self.__ID}, DLC={self.__DLC}, Data={self.__Data}, EOF={self.__EOF})"
 
-    def getID(self):
+    def getID(self) -> int:
         """Get the frame's identifier."""
         return self.__ID    
     
-    def getBits(self):
+    def getBits(self) -> list:
         """
         Convert the frame into a list of bits, with bit stuffing applied.
 
@@ -64,7 +64,7 @@ class Frame:
         return self.__addStuffing(bitFrame)
     
     @classmethod
-    def fromBits(cls, bits: list):
+    def fromBits(cls, bits: list) -> 'Frame':
         """
         Create a Frame instance from a list of bits.
 
@@ -113,7 +113,7 @@ class Frame:
         except Exception:
             return None
     
-    def __addStuffing(self, bitFrame):
+    def __addStuffing(self, bitFrame: list) -> list:
         """
         Apply bit stuffing to the frame.
 
@@ -142,7 +142,7 @@ class Frame:
         return stuffedFrame
     
     @staticmethod
-    def __removeStuffing(bitFrame):
+    def __removeStuffing(bitFrame: list) -> list:
         """
         Remove bit stuffing from the frame.
 
@@ -173,7 +173,7 @@ class Frame:
 
         return unstuffedFrame
     
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Compare two Frame objects for equality.
 
