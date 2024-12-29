@@ -112,10 +112,9 @@ class ECU:
 
     def __TECdecrease(self):
         """Decrease the Transmit Error Counter (TEC) and update the ECU's state."""
+        if self.__TEC > 0:
+            self.__TEC -= 1
         self.__TECvalues.append([self.__TEC, time.time()])
-        if self.__TEC < 1:
-            return
-        self.__TEC -= 1
         self.errorStatus()
 
     # def __RECincrease(self):
