@@ -58,11 +58,10 @@ class CanBus:
             self.__waitEvent.clear()
             self.__frameCountEvent.clear()
 
-    def nextBit(self):        
+    def process(self):        
         with self.__lock:
             """
-            Simulates the bus processing the next bit in a transmission.
-            Manages transitions between ACTIVE, WAIT, and IDLE states.
+            Store the current bit in the frame and update the bus status.
             """
 
             # CanBus to IDLE status
@@ -144,7 +143,7 @@ class CanBus:
         """Waits for the frame count to increase."""
         self.__frameCountEvent.wait()
         
-    # I tried to avoid to use this method, since is not correct that the CanBus  
+    # I tried to avoid to use this method, since is not correct that the CanBus inform the ECU when to send a frame 
     def waitFrameCountMultiple(self, period):
         """
         Waits until the frame count is a multiple of a given period.
@@ -159,6 +158,7 @@ class CanBus:
             time.sleep(0.001)
         return self.__count
             
+    # I tried to avoid to use this method, since is not correct that the CanBus inform the ECU when to send a frame 
     def waiFrameCount(self, frameNumber):
         """
         Waits until the frame count reaches a specified number.

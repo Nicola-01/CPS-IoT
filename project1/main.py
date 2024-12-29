@@ -1,4 +1,5 @@
 import random
+import sys
 import time
 import threading
 import matplotlib.pyplot as plt
@@ -8,172 +9,167 @@ from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-CLOCK = 0.01  # seconds
-ECU_NUMBER = 0 # (without count Victim and Adversary)
-PERIOD = 5
-
-VICTIM = 0
-ADVERSARY = 1
+# Constants
+CLOCK = 0.005  # Time step in seconds
+ECU_NUMBER = 0  # Number of additional ECUs (excluding Victim and Adversary)
+                # This parameter can be changed, but if it's greater than 0, the program may not work properly
+PERIOD = 5  # Transmission period for each ECU
+            # must be at least 5 to ensure proper synchronization.
 
 ECUname = ["Victim", "Adversary"]
-ECUstopSignal = threading.Event()
-CanBusStopSignal = threading.Event()
+VICTIM = 0  # Index for the Victim ECU
+ADVERSARY = 1  # Index for the Adversary ECU
 
-TECarr = [[], []]
+ECUstopSignal = threading.Event()  # Event to stop all ECU threads
+CanBusStopSignal = threading.Event()  # Event to stop the CAN Bus thread
 
-START = time.time()  # Use the current time as the starting point
+# I tried to avoid using barriers for synchronization, as it's possible to synchronize the threads without them (was my first implementation). 
+# However, there were some issues with thread synchronization where one of the threads lost sync, causing 
+# transmissions to happen in different CAN bus cycles. As a result, these barriers are now used to ensure proper synchronization.
+start_barrier = threading.Barrier(1 + ECU_NUMBER)  # Barrier to synchronize ECU threads at start
+sync_barrier = threading.Barrier(2)  # Barrier for synchronizing the transmission of victim and adversary
+
+TECarr = [[], []] # List to store TEC data for each ECU
+
+START = time.time()  # Starting time for the simulation (used for time calculations)
 
 def attacker(canBus: 'CanBus'):
+    """
+    Simulates the attacker ECU. It monitors the frames on the CAN bus and tries to find the 
+    Victim's transmission period by detecting the periodic transmission of the Victim's ID.
+    Once the period is detected, the attacker ECU begins its own transmission to do a Bus-off attack.
+    """
+    
     frame = None
-
     victimFrameNumber = None
     victimFrame = None
     period = None
 
-    # time.sleep(2)
-
+    # Wait for a frame to match the Victim's periodic transmission
     while True:
-        clock.wait()
-        canBus.waitIdleStatus()
-        # print(f" ---- canBus.getCount() {canBus.getCount()};")
-        frame = Frame.fromBits(bits=canBus.getSendedFrame())
+        clock.wait()   # Synchronize with the global clock
+        canBus.waitIdleStatus()  # Ensure the CAN bus is idle
+        frame = Frame.fromBits(bits=canBus.getSendedFrame()) # Get the frame from the bus
+        
         if victimFrameNumber != None and victimFrameNumber < canBus.getCount() and victimFrame == frame:
-            period = canBus.getCount() - victimFrameNumber
+            period = canBus.getCount() - victimFrameNumber # Calculate the transmission period
             break
 
         if victimFrame == None and frame != None:
             victimFrameNumber = canBus.getCount()
-            # print(f" ---- victimFrameNumber: {victimFrameNumber};")
             victimFrame = frame
             frame = None
                         
+    # Create an attacker frame using the same ID as the Victim's frame
     attackerFrame = Frame(victimFrame.getID(), 1, [0])
                         
     print(f" Adversary found Victim's period: {period}")
     global adversaryStart 
     adversaryStart = True
-    ecuThread(ECUname[1], 1, period, canBus, attackerFrame)
+    ecuThread(ECUname[1], 1, period, canBus, attackerFrame)  # Start the adversary ECU thread
 
-start_barrier = threading.Barrier(1 + ECU_NUMBER)
-sync_barrier = threading.Barrier(2)
 
-def ecuThread(name, index, period, canBus: 'CanBus', frame: 'Frame'):
-    clock.wait()
-    ecu = ECU(name, canBus, frame, clock)
+def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
+    """
+    Represents the ECU thread that handles transmission and retransmission of frames on the CAN bus.
+    Each ECU waits for its turn to transmit based on its period, or retransmits if there is an error.
+    """
+    
+    clock.wait()  # Synchronize with the global clock
+    ecu = ECU(name, canBus, frame, clock)  # Create the ECU instance
     print(f"{name:<11} period: {period:<2} Frame {frame}")
     
     retransmission = False
     lastFrameNumber = 0
     frameTretransmission = 0
     
+    # Declare the variables as global to share them across different functions/threads
     global adversaryTransmission 
     global victimTransmission 
+    
+    # Initialize the transmission counters for both the adversary and the victim
+    # These counters track the number of transmissions each ECU has made
+    # Used for synchronization between the victim and adversary
     adversaryTransmission = 0
     victimTransmission = 0 
         
     if name != ECUname[ADVERSARY]:
         global adversaryStart 
         adversaryStart = False
-        start_barrier.wait()
+        start_barrier.wait()  # Wait for all ECUs to start
 
+    # ECU threads stop when one ECU enters the BUS_OFF state
     while not ECUstopSignal.is_set() and ecu.getStatus() != ECU.BUS_OFF:
-        
-        # print(f"canBus.getCount() {canBus.getCount()}")
-        # print(f"{name:<11}: pre  canBus.getCount() {canBus.getCount()}")
-        # while canBus.getCount() % period != 0:
-        #     # print(f"while canBus.getCount() {canBus.getCount()}")
-        #     # clock.wait()
-        #     # clock.wait()
-        #     time.sleep(0.001)
-        #     # canBus.waitFrameCountIncreese()
-            
-        if not retransmission: # if retransmission is required, wait for the next period
-            # print(f"{name:<11} waitFrameCountMultiple {time.time() - START}")
-            franmen = canBus.waitFrameCountMultiple(period)  
-            if name == ECUname[VICTIM]:
-                victimTransmission = franmen
-            elif name == ECUname[ADVERSARY]:
-                adversaryTransmission = franmen
-            # print(f"{name:<11} exit waitFrameCountMultiple {time.time() - START}")
-        else:
+
+        if retransmission:  # retransmit in case of an error without waiting for the period
             frameTretransmission = lastFrameNumber + 1
-            # print(f"{name:<11} retransmission, wait frame {frameTretransmission}")
-            canBus.waiFrameCount(frameTretransmission) # wait for the next frame after the
+            canBus.waiFrameCount(frameTretransmission) # wait for the next frame for start the retransmission
+            
+            # update the transmission counters
             if name == ECUname[VICTIM]:
                 victimTransmission = frameTretransmission
             elif name == ECUname[ADVERSARY]:
                 adversaryTransmission = frameTretransmission
+                
+        else: # Wait the next period to transmit a frame 
+            franmen = canBus.waitFrameCountMultiple(period)  
             
-        retransmission = False
-        
-        # print(f"{name:<11}: post canBus.getCount() {canBus.getCount()}")
-        
-        # print(f"{name:<11} wait {time.time() - START}")
+            # update the transmission counters
+            if name == ECUname[VICTIM]:
+                victimTransmission = franmen
+            elif name == ECUname[ADVERSARY]:
+                adversaryTransmission = franmen
             
+        retransmission = False  # Reset retransmission flag
+        
+        # Sync
         clock.wait()
         canBus.waitIdleStatus()
         
+        lastFrameNumber = canBus.getCount()  # Get the current frame count   
         
-        # print(f"{name:<11}: adversaryTransmission {adversaryTransmission} victimTransmission {victimTransmission}")
-        
-        # without this barrier, the adversary can start a cicle before the victim or vice versa
-        
-        lastFrameNumber = canBus.getCount()
-        if (lastFrameNumber == 0 and name != ECUname[VICTIM]):
-            continue
-        
+        # Synchronize victim and adversary transmission cycles   
         if (name in ECUname[:2] and adversaryStart and adversaryTransmission == victimTransmission):
             sync_barrier.wait()
             
-        # clock.wait()
-        # canBus.waitIdleStatus()
-        
-        
-        # print(f"{name:<11} stop waiting {time.time() - START}")
-        # print(f"{name:<11}: Sending frame")
-        
-
-        # print(f"{name:<11} start transmission, frameCount {lastFrameNumber}, {time.time() - START}")
-        tranmitedStatus = ecu.sendFrame()
-        # if tranmitedStatus != ECU.LOWER_FRAME_ID:
-
+        tranmitedStatus = ecu.sendFrame() # Send the frame on the bus and get the transmission status
         print(f"{name:<11}:tranmitedStatus {tranmitedStatus:<15} TEC {ecu.getTEC():<3} {ecu.getStatus():<13} frameCount {lastFrameNumber}")
+        
+        # Check if the ECU has entered BUS_OFF state
         if ecu.getStatus() == ECU.BUS_OFF:
-            ECUstopSignal.set()  # Segnala a tutti i thread di fermarsi
+            ECUstopSignal.set()  # Stop all threads if BUS_OFF state is reached
             print(f"{name} entered BUS_OFF. Stopping all threads.")
-            
-        if tranmitedStatus != ECU.COMPLITED:
-            canBus.waitIdleStatus()
-        # print(f"{name:<11} end transmission {time.time() - START}")
 
-        # retransmition
+        # Retransmission if a bit error occurs
         if tranmitedStatus == ECU.BIT_ERROR:
             retransmission = True
             continue
         
+        # Sync
         canBus.waitIdleStatus()
-        # print(f"{name:<11} in idle {time.time() - START}")
-        clock.wait() #sync
-        clock.wait() #sync
-        # canBus.waitFrameCountIncreese()
-        # clock.wait()
-        # clock.wait()
-        # canBus.waitIdleStatus()
+        clock.wait() 
+        clock.wait()
             
-    TECarr[index] = ecu.getTECs()
+    TECarr[index] = ecu.getTECs()  # Store TEC data for later plotting
 
 def canBusThread(canBus: 'CanBus'):
+    """
+    Simulates the CAN bus operation.
+    """
     while not CanBusStopSignal.is_set():
         clock.wait()
-
         clock.wait()
         clock.wait()
-        
-        canBus.nextBit()
+        canBus.process() # Save the current bit in the frame and wait for the next bit or the end of the frame
 
 def plot_graph(tec_data):
+    """
+    Plots the TEC (Transmitter Error Counter) values over time for each ECU.
+    """
+    
     plt.figure(figsize=(10, 6))
 
+    # Plot the TEC values for each ECU
     for i, data in enumerate(tec_data):
         tec = [item[0] for item in data]
         time = [(item[1] - START) * 1000 for item in data]
@@ -188,49 +184,67 @@ def plot_graph(tec_data):
     plt.tight_layout()
 
     plt.show()
+        
+def randomFrame() -> 'Frame':
+    """
+    Generates a random frame with a random ID, DLC, and data.
+    """
+    
+    id = random.randint(0b00000000000, 0b11111111111)
+    dlc = random.randint(1, 4)  # Data Length Code (DLC) between 1 and 4 bytes
+                                # The real DLC can be between 0 and 8 bytes, but for speed, I limit it to 4 bytes
+    data = []
+    for i in range(dlc):
+        data.append(random.randint(0, 255))
+    
+    return Frame(id, dlc, data)
 
 if __name__ == "__main__":
+    """
+    Main function to initialize and start the simulation.
+    """
     
-    random.seed()
+    random.seed()  # Initialize random seed
 
+    # Create a global clock and start its thread
     clock = GlobalClock(CLOCK)
     clock_thread = threading.Thread(target=clock.start)
     clock_thread.start()
 
+    # Initialize the CAN bus
     canBus = CanBus(clock)
-    victimFrame = Frame(0b01010101010, 2, [255, 255])
+    
+    victimFrame = randomFrame()  # Generate a random frame for the Victim ECU
 
+    # Generate the threads for the canBus, victim, and attacker
     canBus_thread = threading.Thread(target=canBusThread, args=(canBus,))
     ecu_threads = [
         threading.Thread(target=ecuThread, args=(ECUname[0], 0, PERIOD, canBus, victimFrame)),
         threading.Thread(target=attacker, args=(canBus,))
         ]
 
+    # Create additional ECUs
     for i in range(ECU_NUMBER):
-        id = random.randint(0b01010101011, 0b11111111111)
-        dlc = random.randint(1, 4) # real valure max ->8 , decreese for increese speed in transmission
-        data = []
-        for j in range(dlc):
-            data.append(random.randint(0, 255))
-        
-        frame = Frame(id, dlc, data)
-        period = random.randint(3, 7)
+        frame = randomFrame()
+        period = random.randint(PERIOD, PERIOD * 3)  # Random period for the ECU
         ECUname.append(f"ECU{i+1}")
         TECarr.append([])
 
         ecu_threads.append(threading.Thread(target=ecuThread, args=(ECUname[-1], i+2, period, canBus, frame)))
 
-    # attacker_thread = threading.Thread(target=attacker, args=(canBus, attackerFrame))
-
+    # Start all threads
     canBus_thread.start()
     for thread in ecu_threads: thread.start() 
 
+    # Wait for all ECU threads to finish
     for thread in ecu_threads: thread.join()
 
-    CanBusStopSignal.set() # wait all threads to stop canbus 
+    CanBusStopSignal.set() # Wait all ECU threads to stop canbus thread 
 
     print("All threads stopped.")
+    
+    # Plot the TEC graph for all ECUs
 
     plot_graph(TECarr)
-
-    # attacker_thread.start()
+    
+    exit()
