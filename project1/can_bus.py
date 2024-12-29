@@ -1,4 +1,5 @@
 import threading
+import time
 from global_clock import GlobalClock
 
 class CanBus:
@@ -12,8 +13,10 @@ class CanBus:
         self.__clock = clock
         self.__lock = threading.Lock()
         self.__count = 0
+        self.__conseutiveIdle = 0
         self.__idleEvent = threading.Event()
         self.__waitEvent = threading.Event()
+        self.__frameCountEvent = threading.Event()
         self.__retransmitEvent = threading.Event()
 
         self.__requiredRetransmit = 0
@@ -29,9 +32,10 @@ class CanBus:
 
             self.__idleEvent.clear()
             self.__waitEvent.clear()
+            self.__frameCountEvent.clear()
             # self.retransmitEvent.clear()
 
-    def nextBit(self):
+    def nextBit(self):        
         with self.__lock:
             # print("CanBus nextBit")
             # if self.__requiredRetransmit > 0 and self.status == self.IDLE:
@@ -41,11 +45,14 @@ class CanBus:
             #     self.__requiredRetransmit -= 1
                 # self.__clock.wait()
 
+            # CanBus to IDLE status
             if self.__status == self.WAIT: # 2 cycles without new bit 
                 self.__lastSendedFrame = self.__frame
                 self.clearBus()
                 self.__count+=1
+                self.__frameCountEvent.set()
             
+            # CanBus to WAIT status
             elif self.__status == self.ACTIVE:
                 self.__frame.append(self.__current_bit)
                 
@@ -56,10 +63,18 @@ class CanBus:
                 # print("CanBus to WAIT")
                 
             elif self.__status == self.IDLE:
+                self.__conseutiveIdle += 1
+                if self.__conseutiveIdle == 2:
+                    self.__count+=1
+                    self.__frameCountEvent.set()
+                    self.__conseutiveIdle = 0
+                else:
+                    self.__frameCountEvent.clear()
+
+
                 self.__lastSendedFrame = None
-                self.__count+=1
                 # print("CanBus in IDLE")
-            # print(f"CanBus __count: {self.__count}")
+            # print(f"CanBus __count: {self.__count}\t status: {self.__status} conseutiveIdle: {self.__conseutiveIdle}")
 
     def getSendedFrame(self):
         return self.__lastSendedFrame
@@ -90,7 +105,24 @@ class CanBus:
         return self.__count
     
     def waitIdleStatus(self):
-        self.__idleEvent.wait()
+        while self.__status != self.IDLE:
+            self.__idleEvent.wait()
         
     def waitWaitStatus(self):
         self.__waitEvent.wait()
+        
+    def waitFrameCountIncreese(self):
+        self.__frameCountEvent.wait()
+        
+    # I tried to avoid to use this method, since is not correct that the CanBus  
+    def waitFrameCountMultiple(self, period):
+        while self.__count % period != 0:
+            # self.__clock.wait()
+            # self.__frameCountEvent.wait()
+            time.sleep(0.001)
+        return self.__count
+            
+    def waiFrameCount(self, frameNumber):
+        while self.__count < frameNumber:
+            # self.__clock.wait()
+            time.sleep(0.001)
