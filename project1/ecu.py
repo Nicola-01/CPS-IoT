@@ -74,7 +74,7 @@ class ECU:
             i += 1
             if len(frameBits) == i:
                 self.__TECdecrease()
-                self.__TECvalues.append([self.__TEC, time.time()])
+                # self.__TECvalues.append([self.__TEC, time.time()])
                 return self.COMPLITED
             self.__clock.wait()
     
@@ -84,10 +84,10 @@ class ECU:
         self.errorStatus()
 
     def __TECdecrease(self):
+        self.__TECvalues.append([self.__TEC, time.time()])
         if self.__TEC < 1:
             return
         self.__TEC -= 1
-        self.__TECvalues.append([self.__TEC, time.time()])
         self.errorStatus()
 
     # def __RECincrease(self):

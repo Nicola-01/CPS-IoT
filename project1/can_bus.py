@@ -105,7 +105,8 @@ class CanBus:
         return self.__count
     
     def waitIdleStatus(self):
-        self.__idleEvent.wait()
+        while self.__status != self.IDLE:
+            self.__idleEvent.wait()
         
     def waitWaitStatus(self):
         self.__waitEvent.wait()
@@ -116,8 +117,10 @@ class CanBus:
     # I tried to avoid to use this method, since is not correct that the CanBus  
     def waitFrameCountMultiple(self, period):
         while self.__count % period != 0:
-            self.__clock.wait()
-            self.__frameCountEvent.wait()
+            # self.__clock.wait()
+            # self.__frameCountEvent.wait()
+            time.sleep(0.001)
+        return self.__count
             
     def waiFrameCount(self, frameNumber):
         while self.__count < frameNumber:
