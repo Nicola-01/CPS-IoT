@@ -76,7 +76,7 @@ def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
     """
     
     clock.wait()  # Synchronize with the global clock
-    ecu = ECU(name, canBus, frame, clock)  # Create the ECU instance
+    ecu = ECU(name, canBus, clock)  # Create the ECU instance
     print(f"{name:<11} period: {period:<2} Frame {frame}")
     
     retransmission = False
@@ -132,7 +132,7 @@ def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
         if (name in ECUname[:2] and adversaryStart and adversaryTransmission == victimTransmission):
             sync_barrier.wait()
             
-        tranmitedStatus = ecu.sendFrame() # Send the frame on the bus and get the transmission status
+        tranmitedStatus = ecu.sendFrame(frame) # Send the frame on the bus and get the transmission status
         print(f"{name:<10} | ECU: TEC: {ecu.getTEC():<3}, status: {ecu.getStatus():<13} | Trasmitted frame status: {tranmitedStatus:<9} | CanBus slot: {lastFrameNumber}")
 
         
@@ -142,7 +142,7 @@ def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
             print(f"{name} entered BUS_OFF. Stopping all threads.")
 
         # Retransmission if a bit error occurs
-        if tranmitedStatus == ECU.BIT_ERROR:
+        if tranmitedStatus != ECU.COMPLITED:
             retransmission = True
             continue
         

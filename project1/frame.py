@@ -4,7 +4,7 @@ class Frame:
 
     Attributes:
         SOF (int): Start of frame, fixed to 0.
-        ID (int): 11-bit identifier for the frame.
+        ID (int): 11 bits identifier for the frame.
         DLC (int): Data Length Code (number of data bytes, 0-8).
         Data (list): List of up to 8 data bytes (default: [0] * 8).
         EOF (int): End of frame, fixed to 0b1111111.

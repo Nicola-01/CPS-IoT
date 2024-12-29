@@ -3,8 +3,6 @@ from can_bus import CanBus
 from global_clock import GlobalClock
 import time
 
-import matplotlib.pyplot as plt
-
 class ECU:
     """
     Represents an Electronic Control Unit (ECU) in a CAN bus system.
@@ -36,20 +34,19 @@ class ECU:
     __ERROR_PASSIVE_FLAG = [0b1] * 6  # Error flag for passive state
 
 
-    def __init__(self, name: str, canBus: 'CanBus', frame: 'Frame', clock : 'GlobalClock'):
+    def __init__(self, name: str, canBus: 'CanBus', clock : 'GlobalClock'):
         """
         Initialize an ECU instance.
 
         Args:
             name (str): Name of the ECU.
             canBus (CanBus): CAN bus instance the ECU is connected to.
-            frame (Frame): Frame to be transmitted.
+
             clock (GlobalClock): Clock for synchronization.
         """
         
         self.name = name
         self.__canBus = canBus
-        self.__frame = frame
         self.__clock = clock
 
         self.__TEC = 0  # Transmit Error Counter
@@ -58,10 +55,13 @@ class ECU:
         self.__TECvalues = [[0, time.time()]]  # Store TEC changes over time
 
 
-    def sendFrame(self):
+    def sendFrame(self, frame : 'Frame') -> str:
         """
         Transmit a frame over the CAN bus.
 
+        Args:
+            frame (Frame): Frame to be transmitted.
+        
         Returns:
             str: Transmission status (COMPLITED, LOWER_FRAME_ID, BIT_ERROR, or STUFF_ERROR).
         """
@@ -70,7 +70,7 @@ class ECU:
             return
         
         i = 0 # bit index
-        frameBits = self.__frame.getBits() # get frame bits
+        frameBits = frame.getBits() # get frame bits
         recivedBit = [] # store bits recived from canbus
 
         while True:

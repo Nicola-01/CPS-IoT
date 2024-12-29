@@ -8,13 +8,13 @@ class CanBus:
 
     Attributes:
         IDLE: Bus is idle and ready for new transmissions.
+        WAIT: Bus is waiting for the next bit.
         ACTIVE: A transmission is currently active on the bus.
-        WAIT: Bus is waiting for the next bit or arbitration resolution.
     """
     
     IDLE = "IDLE"
-    ACTIVE = "ACTIVE"
     WAIT = "WAIT"
+    ACTIVE = "ACTIVE"
     
     def __init__(self, clock : 'GlobalClock'):
         """
