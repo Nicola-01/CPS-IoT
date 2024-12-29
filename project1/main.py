@@ -133,7 +133,8 @@ def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
             sync_barrier.wait()
             
         tranmitedStatus = ecu.sendFrame() # Send the frame on the bus and get the transmission status
-        print(f"{name:<11}:tranmitedStatus {tranmitedStatus:<15} TEC {ecu.getTEC():<3} {ecu.getStatus():<13} frameCount {lastFrameNumber}")
+        print(f"{name:<10} | ECU: TEC: {ecu.getTEC():<3}, status: {ecu.getStatus():<13} | Trasmitted frame status: {tranmitedStatus:<9} | CanBus slot: {lastFrameNumber}")
+
         
         # Check if the ECU has entered BUS_OFF state
         if ecu.getStatus() == ECU.BUS_OFF:

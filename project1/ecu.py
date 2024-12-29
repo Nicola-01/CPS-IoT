@@ -15,9 +15,9 @@ class ECU:
         BUS_OFF: The ECU is in the bus-off state and cannot send messages.
 
         COMPLITED: Frame transmission completed successfully.
-        LOWER_FRAME_ID: Another ECU has a lower frame ID (priority conflict).
         BIT_ERROR: A bit error was detected during transmission.
         STUFF_ERROR: A stuffing error was detected during transmission.
+        LOWER_FRAME_ID: Another ECU has a lower frame ID (priority conflict).
     """
 
     # ECU status
@@ -27,9 +27,9 @@ class ECU:
 
     # Transmission status
     COMPLITED = "COMPLITED"
-    LOWER_FRAME_ID = "LOWER_FRAME_ID"
     BIT_ERROR = "BIT_ERROR"
     STUFF_ERROR = "STUFF_ERROR"
+    LOWER_FRAME_ID = "LOWER_FRAME_ID"
 
     # Error flags
     __ERROR_ACTIVE_FLAG = [0b0] * 6  # Error flag for active state
