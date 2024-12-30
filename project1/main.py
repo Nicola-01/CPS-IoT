@@ -61,9 +61,9 @@ def attacker(canBus: 'CanBus'):
             frame = None
                         
     # Create an attacker frame using the same ID as the Victim's frame
-    attackerFrame = Frame(victimFrame.getID(), 1, [0])
+    attackerFrame = Frame(victimFrame.getID(), 0, [])
                         
-    print(f" Adversary found Victim's period: {period}")
+    print(f"Adversary found Victim's period: {period}")
     global adversaryStart 
     adversaryStart = True
     ecuThread(ECUname[1], 1, period, canBus, attackerFrame)  # Start the adversary ECU thread
@@ -77,7 +77,7 @@ def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
     
     clock.wait()  # Synchronize with the global clock
     ecu = ECU(name, canBus, clock)  # Create the ECU instance
-    print(f"{name:<11} period: {period:<2} Frame {frame}")
+    print(f"Start {name:<9} -> Period: {period:<2}; {frame}")
     
     retransmission = False
     lastFrameNumber = 0
@@ -133,7 +133,7 @@ def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
             sync_barrier.wait()
             
         tranmitedStatus = ecu.sendFrame(frame) # Send the frame on the bus and get the transmission status
-        print(f"{name:<10} | ECU: TEC: {ecu.getTEC():<3}, status: {ecu.getStatus():<13} | Trasmitted frame status: {tranmitedStatus:<9} | CanBus slot: {lastFrameNumber}")
+        print(f"   {name:<9} | ECU: TEC: {ecu.getTEC():<3}, Status: {ecu.getStatus():<13} | Trasmitted frame status: {tranmitedStatus:<9} | CanBus slot: {lastFrameNumber}")
 
         
         # Check if the ECU has entered BUS_OFF state

@@ -38,7 +38,7 @@ class Frame:
 
     def __str__(self) -> str:
         """Return a string representation of the frame."""
-        return f"Packet(SOF={self.__SOF}, ID={self.__ID}, DLC={self.__DLC}, Data={self.__Data}, EOF={self.__EOF})"
+        return f"Frame(SOF={self.__SOF}, ID={self.__ID}, DLC={self.__DLC}, Data={self.__Data}, EOF={self.__EOF})"
 
     def getID(self) -> int:
         """Get the frame's identifier."""
