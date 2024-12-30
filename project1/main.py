@@ -77,7 +77,7 @@ def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
     
     clock.wait()  # Synchronize with the global clock
     ecu = ECU(name, canBus, clock)  # Create the ECU instance
-    print(f"Start {name:<9} -> Period: {period:<2}; {frame}\n{frame.getBits()}")
+    print(f"Start {name:<9} -> Period: {period:<2}; {frame}")
     
     retransmission = False
     lastFrameNumber = 0
