@@ -134,8 +134,8 @@ def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
         if (name in ECUname[:2] and adversaryStart and adversaryTransmission == victimTransmission):
             sync_barrier.wait()
             
-        tranmitedStatus = ecu.sendFrame(frame) # Send the frame on the bus and get the transmission status
-        print(f"   {name:<9} | ECU: TEC: {ecu.getTEC():<3}, Status: {ecu.getStatus():<13} | Trasmitted frame status: {tranmitedStatus:<9} | CanBus slot: {lastFrameNumber}")
+        transmitedStatus = ecu.sendFrame(frame) # Send the frame on the bus and get the transmission status
+        print(f"   {name:<9} | ECU: TEC: {ecu.getTEC():<3}, Status: {ecu.getStatus():<13} | Transmitted frame status: {transmitedStatus:<9} | CanBus slot: {lastFrameNumber}")
 
         
         # Check if the ECU has entered BUS_OFF state
@@ -144,7 +144,7 @@ def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
             print(f"{name} entered BUS_OFF. Stopping all threads.")
 
         # Retransmission if a bit error occurs
-        if tranmitedStatus != ECU.COMPLITED:
+        if transmitedStatus != ECU.COMPLITED:
             retransmission = True
             continue
         
