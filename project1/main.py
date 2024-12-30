@@ -1,5 +1,4 @@
 import random
-import sys
 import time
 import threading
 import matplotlib.pyplot as plt
@@ -78,7 +77,7 @@ def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
     
     clock.wait()  # Synchronize with the global clock
     ecu = ECU(name, canBus, clock)  # Create the ECU instance
-    print(f"Start {name:<9} -> Period: {period:<2}; {frame}")
+    print(f"Start {name:<9} -> Period: {period:<2}; {frame}\n{frame.getBits()}")
     
     retransmission = False
     lastFrameNumber = 0
@@ -252,5 +251,3 @@ if __name__ == "__main__":
     # Plot the TEC graph for all ECUs
 
     plot_graph(TECarr)
-    
-    exit()

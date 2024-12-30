@@ -134,7 +134,8 @@ class Frame:
                 count += 1
                 if count == 5: # 5 consecutive bits of the same value add a bit of the opposite value
                     stuffedFrame.append(1 - bit) # Add opposite bit
-                    count = 0
+                    bit = 1 - bit # Update last bit
+                    count = 1 # Reset count, since we added a new bit
             else:
                 count = 1
             lastBit = bit
