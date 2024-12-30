@@ -5,21 +5,23 @@ class GlobalClock:
     """
     A class to synchronize processes with periodic signals.
     """
-    def __init__(self, period: float):
+    def __init__(self, period: float, stop_signal: threading.Event):
         """
         Initialize the clock.
 
         Args:
             period (float): Time in seconds between signals.
+            stop_signal (threading.Event): Event to stop the clock thread.
         """
         self.event = threading.Event()  # Synchronization event
         self.period = period  # Clock cycle duration
+        self.stop_signal = stop_signal  # Stop signal
 
     def start(self):
         """
         Run the clock, emitting signals periodically.
         """
-        while True:
+        while not self.stop_signal.is_set():
             time.sleep(self.period)  # Wait for the cycle duration
             self.event.set()
             self.event.clear()

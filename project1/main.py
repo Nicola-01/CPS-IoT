@@ -22,6 +22,7 @@ ADVERSARY = 1  # Index for the Adversary ECU
 
 ECUstopSignal = threading.Event()  # Event to stop all ECU threads
 CanBusStopSignal = threading.Event()  # Event to stop the CAN Bus thread
+GlobalClockStopSignal = threading.Event()  # Event to stop the Global clock thread
 
 # I tried to avoid using barriers for synchronization, as it's possible to synchronize the threads without them (was my first implementation). 
 # However, there were some issues with thread synchronization where one of the threads lost sync, causing 
@@ -208,7 +209,7 @@ if __name__ == "__main__":
     random.seed()  # Initialize random seed
 
     # Create a global clock and start its thread
-    clock = GlobalClock(CLOCK)
+    clock = GlobalClock(CLOCK, GlobalClockStopSignal)
     clock_thread = threading.Thread(target=clock.start)
     clock_thread.start()
 
@@ -240,7 +241,11 @@ if __name__ == "__main__":
     # Wait for all ECU threads to finish
     for thread in ecu_threads: thread.join()
 
-    CanBusStopSignal.set() # Wait all ECU threads to stop canbus thread 
+    # Wait all ECU threads to stop canbus thread 
+    CanBusStopSignal.set()
+    
+    # Stop the GlobalClock thread
+    GlobalClockStopSignal.set()
 
     print("All threads stopped.")
     
