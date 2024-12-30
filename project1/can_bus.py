@@ -159,7 +159,7 @@ class CanBus:
         return self.__count
             
     # I tried to avoid to use this method, since is not correct that the CanBus inform the ECU when to send a frame 
-    def waiFrameCount(self, frameNumber):
+    def waitFrameCount(self, frameNumber):
         """
         Waits until the frame count reaches a specified number.
 

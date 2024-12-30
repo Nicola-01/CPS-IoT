@@ -8,13 +8,15 @@ from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-# Constants
+# Customisable Parameters
 CLOCK = 0.005  # Time step in seconds
 ECU_NUMBER = 0  # Number of additional ECUs (excluding Victim and Adversary)
-                # This parameter can be changed, but if it's greater than 0, the program may not work properly
-PERIOD = 5  # Transmission period for each ECU
+                # Not proprerty used in this implementation, but can be used to add more ECUs, 
+                # but this can create some issues with the synchronization
+PERIOD = 5  # Transmission period for Victim and Adversary ECU
             # must be at least 5 to ensure proper synchronization.
 
+# Fixed Parameters (these should not be modified)
 ECUname = ["Victim", "Adversary"]
 VICTIM = 0  # Index for the Victim ECU
 ADVERSARY = 1  # Index for the Adversary ECU
@@ -103,7 +105,7 @@ def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
 
         if retransmission:  # retransmit in case of an error without waiting for the period
             frameTretransmission = lastFrameNumber + 1
-            canBus.waiFrameCount(frameTretransmission) # wait for the next frame for start the retransmission
+            canBus.waitFrameCount(frameTretransmission) # wait for the next frame for start the retransmission
             
             # update the transmission counters
             if name == ECUname[VICTIM]:
@@ -175,9 +177,9 @@ def plot_graph(tec_data):
         tec = [item[0] for item in data]
         time = [(item[1] - START) * 1000 for item in data]
 
-        plt.plot(time, tec, label=ECUname[i], linestyle='-')
+        plt.plot(time, tec, label=ECUname[i]+"'s TEC", linestyle='-')
 
-    plt.xlabel('Time (ms)')
+    plt.xlabel('Time [ms]')
     plt.ylabel('TEC Value')
     plt.title('TEC Values over time')
     plt.legend()
@@ -248,6 +250,5 @@ if __name__ == "__main__":
 
     print("All threads stopped.")
     
-    # Plot the TEC graph for all ECUs
-
+    # Plot the TEC graph for all ECUs   
     plot_graph(TECarr)

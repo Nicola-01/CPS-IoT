@@ -108,14 +108,14 @@ class ECU:
         """Increase the Transmit Error Counter (TEC) and update the ECU's state."""
         self.__TEC += 8
         self.__TECvalues.append([self.__TEC, time.time()])
-        self.errorStatus()
+        self.__errorStatus()
 
     def __TECdecrease(self):
         """Decrease the Transmit Error Counter (TEC) and update the ECU's state."""
         if self.__TEC > 0:
             self.__TEC -= 1
         self.__TECvalues.append([self.__TEC, time.time()])
-        self.errorStatus()
+        self.__errorStatus()
 
     # def __RECincrease(self):
     #     if not self.checkBound(self.__REC):
@@ -131,7 +131,7 @@ class ECU:
     #     self.__RECvalues.append([self.__REC, time.time()])
     #     self.errorStatus()
 
-    def errorStatus(self):
+    def __errorStatus(self):
         """Update the ECU's error state based on TEC and REC values."""
         if self.__TEC > 127 or self.__REC > 127:
             self.__status = self.ERROR_PASSIVE
