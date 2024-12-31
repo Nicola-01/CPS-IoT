@@ -266,7 +266,8 @@ if __name__ == "__main__":
     # Initialize the CAN bus
     canBus = CanBus(clock)
     
-    victimFrame = randomFrame()  # Generate a random frame for the Victim ECU
+    # victimFrame = randomFrame()  # It's possible to generate a random frame for the Victim ECU
+    victimFrame = Frame(671, 3, [217, 16, 133])  # Fixed frame for the Victim ECU
 
     # Generate the threads for the canBus, victim, and attacker
     canBus_thread = threading.Thread(target=canBusThread, args=(canBus,))
