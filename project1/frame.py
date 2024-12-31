@@ -157,14 +157,19 @@ class Frame:
         unstuffedFrame = []
         count = 0
         lastBit = None
+        
+        # The frame is reversed to process the bits from the most recent to the first.
+        # This is done to correctly remove stuffing from the end of the sequence.
+        # 
+        reversed = bitFrame[::-1]
 
-        for i in range(len(bitFrame)):
+        for bit in reversed:
             if count == 5: # 5 consecutive bits of the same, remove the next bit
                 count = 0
-                lastBit = None
-                continue
-            
-            bit = bitFrame[i]
+                lastBit = None     
+                
+                # Pop the bit from the list which corresponds to the stuffed bit.
+                unstuffedFrame.pop(len(unstuffedFrame) - 1 - 5)
             if bit == lastBit:
                 count += 1
             else:
@@ -172,7 +177,8 @@ class Frame:
             lastBit = bit
             unstuffedFrame.append(bit)
 
-        return unstuffedFrame
+        # Reverse the frame back to its original
+        return unstuffedFrame[::-1]
     
     def __eq__(self, other: object) -> bool:
         """

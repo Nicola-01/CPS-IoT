@@ -87,7 +87,7 @@ class CanBus:
                 # frame count is used for periodic sending of frames by the ECUs 
                 self.__conseutiveIdle += 1
                 if self.__conseutiveIdle == 2:
-                    for i in range(4 * 30): # symulate an ECU that send a frame of 30 bits
+                    for _ in range(4 * 30): # symulate an ECU that send a frame of 30 bits
                         self.__clock.wait()
                     self.__count+=1
                     self.__frameCountEvent.set()
