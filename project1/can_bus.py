@@ -64,14 +64,14 @@ class CanBus:
             Store the current bit in the frame and update the bus status.
             """
 
-            # CanBus to IDLE status
+            # CanBus from WAIT to IDLE status
             if self.__status == self.WAIT:  # Two cycles without new bits
                 self.__lastSendedFrame = self.__frame
                 self.clearBus()
                 self.__count+=1
                 self.__frameCountEvent.set()
             
-            # CanBus to WAIT status
+            # CanBus from ACTIVE to WAIT status
             elif self.__status == self.ACTIVE:
                 self.__frame.append(self.__current_bit)
                 
@@ -82,11 +82,13 @@ class CanBus:
                 self.__status = self.WAIT
                 self.__waitEvent.set()
                 
-            elif self.__status == self.IDLE:  # Handle idle state
+            elif self.__status == self.IDLE:
                 # if two consecutive idle states, increment frame count,
                 # frame count is used for periodic sending of frames by the ECUs 
                 self.__conseutiveIdle += 1
                 if self.__conseutiveIdle == 2:
+                    for i in range(4 * 30): # symulate an ECU that send a frame of 30 bits
+                        self.__clock.wait()
                     self.__count+=1
                     self.__frameCountEvent.set()
                     self.__conseutiveIdle = 0
@@ -106,6 +108,7 @@ class CanBus:
         """
         Resets the bus to its default idle state.
         Clears current frame data and updates status to IDLE.
+        Wait for the next frame to be sent.
         """
         
         self.__current_bit = 0b1

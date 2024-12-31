@@ -75,7 +75,7 @@ class ECU:
 
         while True:
             self.__canBus.transmitBit(frameBits[i]) # Send a bit
-            self.__canBus.waitWaitStatus() # Wait for arbitration to complete
+            self.__canBus.waitWaitStatus() # Wait the canbus to process the bit
             lastSendedBit = self.__canBus.getSendedBit() # Get the bit transmitted on the bus
             recivedBit.append(lastSendedBit)
 
@@ -125,9 +125,8 @@ class ECU:
     #     self.errorStatus()
 
     # def __RECdecrease(self):
-    #     if not self.checkBound(self.__REC):
-    #         return
-    #     self.__REC -= 1
+    #     if self.__REC > 0:
+    #         self.__REC -= 1
     #     self.__RECvalues.append([self.__REC, time.time()])
     #     self.errorStatus()
 

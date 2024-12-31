@@ -8,12 +8,12 @@ from can_bus import CanBus
 from frame import Frame
 from global_clock import GlobalClock
 
-# Customisable Parameters
-CLOCK = 0.005  # Time step in seconds
+# Configurable Parameters
+CLOCK = 0.003  # Time step in seconds
 ECU_NUMBER = 0  # Number of additional ECUs (excluding Victim and Adversary)
                 # Not proprerty used in this implementation, but can be used to add more ECUs, 
                 # but this can create some issues with the synchronization
-PERIOD = 5  # Transmission period for Victim and Adversary ECU
+PERIOD = 7  # Transmission period for Victim and Adversary ECU
             # must be at least 5 to ensure proper synchronization.
 
 # Fixed Parameters (these should not be modified)
@@ -26,8 +26,8 @@ CanBusStopSignal = threading.Event()  # Event to stop the CAN Bus thread
 GlobalClockStopSignal = threading.Event()  # Event to stop the Global clock thread
 
 # I tried to avoid using barriers for synchronization, as it's possible to synchronize the threads without them (was my first implementation). 
-# However, there were some issues with thread synchronization where one of the threads lost sync, causing 
-# transmissions to happen in different CAN bus cycles. As a result, these barriers are now used to ensure proper synchronization.
+# However, there were some issues with thread synchronization where one of the threads lost sync, causing transmissions to happen in different 
+# CAN bus cycles. As a result, these barriers are now used to ensure proper synchronization.
 start_barrier = threading.Barrier(1 + ECU_NUMBER)  # Barrier to synchronize ECU threads at start
 sync_barrier = threading.Barrier(2)  # Barrier for synchronizing the transmission of victim and adversary
 
@@ -40,6 +40,17 @@ def attacker(canBus: 'CanBus'):
     Simulates the attacker ECU. It monitors the frames on the CAN bus and tries to find the 
     Victim's transmission period by detecting the periodic transmission of the Victim's ID.
     Once the period is detected, the attacker ECU begins its own transmission to do a Bus-off attack.
+    
+    Attacker steps:
+    (1). The attacker listens on the CAN bus for frames.
+    (2). It identifies the Victim's frame by detecting transmissions with the same ID.
+    (3). The period between consecutive transmissions of the Victim's frame is calculated.
+    (4. After determining the period, the attacker creates its own frame with the same ID and starts
+       transmitting at the same periodic intervals, aiming to induce errors and disrupt the Victim's
+       operation.
+    
+    Args:
+        canBus (CanBus): The CAN bus object used for communication between ECUs.
     """
     
     frame = None
@@ -53,16 +64,18 @@ def attacker(canBus: 'CanBus'):
         canBus.waitIdleStatus()  # Ensure the CAN bus is idle
         frame = Frame.fromBits(bits=canBus.getSendedFrame()) # Get the frame from the bus
         
-        if victimFrameNumber != None and victimFrameNumber < canBus.getCount() and victimFrame == frame:
-            period = canBus.getCount() - victimFrameNumber # Calculate the transmission period
-            break
-
+        # (1)
         if victimFrame == None and frame != None:
             victimFrameNumber = canBus.getCount()
             victimFrame = frame
             frame = None
+        
+        # (2) and (3)
+        if victimFrameNumber != None and victimFrameNumber < canBus.getCount() and victimFrame == frame:
+            period = canBus.getCount() - victimFrameNumber # (3); Calculate the transmission period
+            break
                         
-    # Create an attacker frame using the same ID as the Victim's frame
+    # (4) Create an attacker frame using the same ID as the Victim's frame
     attackerFrame = Frame(victimFrame.getID(), 0, [])
                         
     print(f"Adversary found Victim's period: {period}")
@@ -75,6 +88,13 @@ def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
     """
     Represents the ECU thread that handles transmission and retransmission of frames on the CAN bus.
     Each ECU waits for its turn to transmit based on its period, or retransmits if there is an error.
+    
+    Args:
+        name (str): The name of the ECU (e.g., "Victim", "Adversary").
+        index (int): The index of the ECU in the global TEC tracking list.
+        period (int): The transmission period of the ECU, representing the number of frame slots between consecutive transmissions.
+        canBus (CanBus): The CAN bus object used for communication between ECUs.
+        frame (Frame): The CAN frame to be transmitted by the ECU.
     """
     
     clock.wait()  # Synchronize with the global clock
@@ -157,8 +177,16 @@ def ecuThread(name, index: int, period: int, canBus: 'CanBus', frame: 'Frame'):
 
 def canBusThread(canBus: 'CanBus'):
     """
-    Simulates the CAN bus operation.
+    Simulates the CAN bus operation in a dedicated thread. 
+
+    This thread is responsible for periodically processing the CAN bus state and 
+    synchronizing with the GlobalClock to simulate the behavior of a real CAN bus. 
+
+    Args:
+        canBus (CanBus): The CAN bus instance used to simulate the bus communication 
+                         between multiple ECUs.
     """
+    
     while not CanBusStopSignal.is_set():
         clock.wait()
         clock.wait()
@@ -168,6 +196,11 @@ def canBusThread(canBus: 'CanBus'):
 def plot_graph(tec_data):
     """
     Plots the TEC (Transmitter Error Counter) values over time for each ECU.
+    
+    Args:
+        tec_data (list of lists): A list where each sublist contains the TEC values 
+                                  for a specific ECU, recorded at different time steps.
+                                  Each sublist corresponds to a separate ECU.
     """
     
     plt.figure(figsize=(10, 6))
@@ -191,6 +224,16 @@ def plot_graph(tec_data):
 def randomFrame() -> 'Frame':
     """
     Generates a random frame with a random ID, DLC, and data.
+    
+    Returns:
+        Frame: A new Frame object with the following attributes:
+            - ID: An 11-bit identifier (integer between 0 and 2047).
+            - DLC: A Data Length Code (integer between 1 and 4) specifying 
+              the number of bytes in the data field. Note: The standard DLC 
+              range is 0-8 bytes, but this implementation limits it to 1-4 for 
+              faster simulation.
+            - Data: A list of random integers (0-255) representing the data bytes, 
+              with a length equal to the DLC value.
     """
     
     id = random.randint(0b00000000000, 0b11111111111)
@@ -205,6 +248,12 @@ def randomFrame() -> 'Frame':
 if __name__ == "__main__":
     """
     Main function to initialize and start the simulation.
+    
+    This function:
+        1. Initializes the CAN bus and clock.
+        2. Sets up and starts ECU threads to simulate their behavior.
+        3. Starts the CAN bus thread.
+        4. Plots the TEC data for analysis.
     """
     
     random.seed()  # Initialize random seed
