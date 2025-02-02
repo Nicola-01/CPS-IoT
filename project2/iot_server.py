@@ -12,16 +12,16 @@ class IoTServer(threading.Thread):
     using a secure vault.
     """
 
-    
+
     def __init__(self):
         """
         Initializes the IoT server.
         """
-        
+
         super().__init__()
         self.__lock = threading.Lock()
         self.__condition = threading.Condition(self.__lock)  # Condition variable
-        
+
         self.__SV_database = []
         self.__devices = [] # List of IoTDevice objects
         self.__pairedDevices = [] # List of device IDs that have been paired
@@ -31,19 +31,19 @@ class IoTServer(threading.Thread):
         """
         Main server loop that listens for authentication requests.
         """
-        
+
         print("Server listening...")
 
         while True:
             with self.__condition:
                 while len(self.__pendingDevices) == 0:  # Wait until a device is pending
-                    self.__condition.wait() 
+                   self.__condition.wait()
 
                 print("Initial message sent by device")
-                
+
                 # Get the first pending device
                 deviceID, sessionID = self.__pendingDevices.pop(0)
-                            
+
                 device = self.getDevice(deviceID)
                 index = self.getDeviceIndex(deviceID)
                 secureVault = self.__SV_database[index]
@@ -55,40 +55,40 @@ class IoTServer(threading.Thread):
 
                 k1 = secureVault.getKey(c1)
                 m3 = self.decrypt(k1, device.sendMessage2(m2))
-                
+
                 # Parse M3 message
                 r1_received, t1, c2, r2 = self.__parse_m3(m3)
-                
+
                 # Verify received challenge response
                 if r1_received != r1:
                     print("Authentication failed: r1 mismatch.")
                     return
-                
+
                 # Generate k2, k3, and t2
                 k2 = secureVault.getKey(c2)
                 k3 = bytes(a ^ b for a, b in zip(k2, t1))
                 t2 = SecureVault.generateRandomNumber()
-                
+
                 # Generate M4 message
                 payload = r2 + t2
                 m4 = self.encrypt(k3, payload)
-                
+
                 # Authenticate device
                 if(device.sendMessage4(m4)):
                     sessionKey = bytes(a ^ b for a, b in zip(t2, t1))
                     print(f"Session key Server: {sessionKey.hex()}")
-                    
+
                     # Update secure vault
                     secureVault.update_vault(sessionKey)
 
                     # Add device to paired list in a thread-safe way
-                    with self.__lock:
-                        self.__pairedDevices.append(deviceID)
-                
+                    self.__pairedDevices.append(deviceID)
+                    print(f"Device {deviceID} successfully authenticated.")
+
                 else:
                     print("Authentication failed at M4 verification.")
 
-            
+
     def encrypt(self, key, payload) -> bytes:
         """
         Encrypts a payload using AES-CBC mode with a random IV.
@@ -114,7 +114,7 @@ class IoTServer(threading.Thread):
             bytes: Decrypted plaintext.
         """
         return unpad(AES.new(key, AES.MODE_ECB).decrypt(payload), 16)
-    
+
     def startAuthentication(self, m1: tuple):
         """
         Adds a device to the authentication queue.
@@ -122,21 +122,18 @@ class IoTServer(threading.Thread):
         Args:
             m1 (tuple): (deviceID, sessionID)
         """
-        
+
         deviceID, sessionID = m1
-                
-        print(f"Device {deviceID} waiting for append")
+
         with self.__lock:
             if int(deviceID) in map(int, self.__pairedDevices):
                 print("Device already connected")
                 return False
-        print(f"Device {deviceID} comming for append")
-        
+
         with self.__condition:
-            print(f"Device {deviceID} appended")
             self.__pendingDevices.append((deviceID, sessionID))
             self.__condition.notify()
-             
+
 
     def __parse_m3(self, msg: bytes) -> tuple:
         """
@@ -148,7 +145,7 @@ class IoTServer(threading.Thread):
         Returns:
             tuple: Extracted values (r1, t1, c2, r2).
         """
-        
+
         r1 = msg[:M]
         t1 = msg[M:M*2]
         c2 = msg[M*2:len(msg)-M]
@@ -166,7 +163,7 @@ class IoTServer(threading.Thread):
         Returns:
             SecureVault: A copy of the device's secure vault.
         """
-        
+
         with self.__lock:
             self.__devices.append(device)
             self.__SV_database.append(SecureVault())

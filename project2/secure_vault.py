@@ -65,9 +65,7 @@ class SecureVault:
         2. If the HMAC output is smaller than M-byte partitions, pad it with zeros.
         3. XOR the vault keys with corresponding partitions of the HMAC output.
         """
-        
-        print("Updating key ...")
-        
+                
         # Compute HMAC (hashing all keys together using exchanged data as the key)
         h = hmac.new(data, b''.join(self.__keys), hashlib.sha256).digest()
         

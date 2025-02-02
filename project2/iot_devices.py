@@ -1,4 +1,5 @@
 import random
+import time
 from secure_vault import SecureVault
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
@@ -37,6 +38,8 @@ class IoTDevice:
 
         self.__server = server
         self.__secureVault = self.__server.setUpConnection(self)
+        
+        self.__startTime = time.time()
         self.__server.startAuthentication(m1)
 
     def sendMessage2(self, m2):
@@ -84,6 +87,8 @@ class IoTDevice:
         
         if (r2 == self.__r2):
             print("Server successfully authenticated")
+            self.__finishTime = time.time()
+            print(f"Device {self.__id}: time taken for authentication: {self.__finishTime - self.__startTime:.4f} seconds")
         else:
             print("Server authentication failed")
             return False 
