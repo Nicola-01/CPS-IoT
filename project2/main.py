@@ -6,9 +6,9 @@ from secure_vault import SecureVault
 
 if __name__ == "__main__":
     server = IoTServer()
-    server.start()
+    # server.start()
 
-    device = IoTDevice(1, server)
+    device = IoTDevice(1)
     device.connect(server)
 
-    server.join()
+    # server.join()
