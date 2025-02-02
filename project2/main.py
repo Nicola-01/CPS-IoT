@@ -1,14 +1,13 @@
 import time
-import threading
 from iot_devices import IoTDevice
 from iot_server import IoTServer
 from secure_vault import SecureVault
 
 if __name__ == "__main__":
     server = IoTServer()
-    # server.start()
+    server.start()
 
-    device = IoTDevice(1)
-    device.connect(server)
+    IoTDevice(1).connect(server)
+    IoTDevice(2).connect(server)
 
-    # server.join()
+    server.join()
