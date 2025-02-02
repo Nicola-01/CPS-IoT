@@ -9,7 +9,6 @@ if __name__ == "__main__":
     IoTDevice(1).connect(server)
     # IoTDevice(2).connect(server)
     
-    time.sleep(0.1)
     IoTDevice(1).connect(server)
     
 

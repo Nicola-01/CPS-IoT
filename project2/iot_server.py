@@ -125,12 +125,15 @@ class IoTServer(threading.Thread):
 
         deviceID, sessionID = m1
 
-        with self.__lock:
-            if int(deviceID) in map(int, self.__pairedDevices):
-                print(f"   Device {deviceID} already connected")
-                return False
+
 
         with self.__condition:
+            
+            # with self.__lock:
+            if int(deviceID) in map(int, self.__pairedDevices):
+                print(f"Device {deviceID} already connected")
+                return False
+            
             # print(f"   D{deviceID} added to pending devices")
             self.__pendingDevices.append((deviceID, sessionID))
             self.__condition.notify()
