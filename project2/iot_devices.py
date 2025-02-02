@@ -33,12 +33,15 @@ class IoTDevice:
             server (IoTServer): The IoT server to connect to.
         """
         
-        sessionID = random.randint(0, 2**32)
+        print(f"Device {self.__id} (D{self.__id}) start connection to server")
+        
+        sessionID = SecureVault.generateRandomNumber()
         m1 = (self.__id, sessionID)
 
         self.__server = server
         self.__secureVault = self.__server.setUpConnection(self)
         
+        print(f"   D{self.__id} sends M1 to Server: {m1}")
         self.__startTime = time.time()
         self.__server.startAuthentication(m1)
 
@@ -67,6 +70,7 @@ class IoTDevice:
         # Concatenate payload components
         m3Payload = r1 + self.__t1 + bytes(self.__c2) + self.__r2
         m3 = self.encrypt(k1, m3Payload)
+        print(f"   D{self.__id} sends M3 to Server: {m3}")
         return m3
     
     def sendMessage4(self, m4):
@@ -85,19 +89,22 @@ class IoTDevice:
         
         r2, t2 = self.__parse_m4(self.decrypt(k3, m4))
         
-        if (r2 == self.__r2):
-            print("Server successfully authenticated")
-            self.__finishTime = time.time()
-            print(f"Device {self.__id}: time taken for authentication: {self.__finishTime - self.__startTime:.4f} seconds")
-        else:
-            print("Server authentication failed")
+        if (r2 != self.__r2):
+            print(f"D{self.__id}: Server authentication failed")
             return False 
-            
+        
+        self.__finishTime = time.time()
+        
+        print(f"   D{self.__id}: Server successfully authenticated")
+                    
         # Compute final session key
         sessionKey = bytes(a ^ b for a, b in zip(t2, self.__t1))
-        print(f"Session key Device: {sessionKey.hex()}")
+        print(f"   Session key (Device {self.__id}) for server: {sessionKey.hex()}")
+        
+        print(f"Device {self.__id}: time taken for authentication: {self.__finishTime - self.__startTime:.4f} seconds")
         
         # Update vault using session key
+        print(f"   D{self.__id}: Update vault with session key")
         self.__secureVault.update_vault(sessionKey)
         
         return True

@@ -32,17 +32,16 @@ class IoTServer(threading.Thread):
         Main server loop that listens for authentication requests.
         """
 
-        print("Server listening...")
-
+        print("Server listening...\n")
         while True:
             with self.__condition:
                 while len(self.__pendingDevices) == 0:  # Wait until a device is pending
                    self.__condition.wait()
 
-                print("Initial message sent by device")
-
                 # Get the first pending device
                 deviceID, sessionID = self.__pendingDevices.pop(0)
+                
+                # print(f"   D{deviceID} start authentication process")
 
                 device = self.getDevice(deviceID)
                 index = self.getDeviceIndex(deviceID)
@@ -54,6 +53,7 @@ class IoTServer(threading.Thread):
                 m2 = (c1, r1)
 
                 k1 = secureVault.getKey(c1)
+                print(f"   Server sends M2 to D{deviceID}: {m2}")
                 m3 = self.decrypt(k1, device.sendMessage2(m2))
 
                 # Parse M3 message
@@ -61,8 +61,9 @@ class IoTServer(threading.Thread):
 
                 # Verify received challenge response
                 if r1_received != r1:
-                    print("Authentication failed: r1 mismatch.")
+                    print(f"Authentication failed at M3 verification for device {deviceID}.")
                     return
+                print(f"   Server: D{deviceID} successfully verified M3")
 
                 # Generate k2, k3, and t2
                 k2 = secureVault.getKey(c2)
@@ -74,19 +75,18 @@ class IoTServer(threading.Thread):
                 m4 = self.encrypt(k3, payload)
 
                 # Authenticate device
+                print(f"   Server sends M4 to D{deviceID}: {m4}")
                 if(device.sendMessage4(m4)):
                     sessionKey = bytes(a ^ b for a, b in zip(t2, t1))
-                    print(f"Session key Server: {sessionKey.hex()}")
+                    print(f"   Session key (Server) for Device {deviceID}: {sessionKey.hex()}")
 
                     # Update secure vault
+                    print(f"   Server updates vault with session key for D{deviceID}")
                     secureVault.update_vault(sessionKey)
 
                     # Add device to paired list in a thread-safe way
                     self.__pairedDevices.append(deviceID)
-                    print(f"Device {deviceID} successfully authenticated.")
-
-                else:
-                    print("Authentication failed at M4 verification.")
+                    # print(f"Device {deviceID} successfully authenticated.")
 
 
     def encrypt(self, key, payload) -> bytes:
@@ -127,10 +127,11 @@ class IoTServer(threading.Thread):
 
         with self.__lock:
             if int(deviceID) in map(int, self.__pairedDevices):
-                print("Device already connected")
+                print(f"   Device {deviceID} already connected")
                 return False
 
         with self.__condition:
+            # print(f"   D{deviceID} added to pending devices")
             self.__pendingDevices.append((deviceID, sessionID))
             self.__condition.notify()
 
