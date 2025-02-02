@@ -33,7 +33,7 @@ class SecureVault:
         return random.sample(range(N), P)
     
     def generateRandomNumber():
-        return random.randint(0, 2**32)
+        return os.urandom(M)
 
     # todo to check
     # Update the vault by performing HMAC on the concatenation of all keys

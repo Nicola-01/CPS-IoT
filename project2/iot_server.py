@@ -1,4 +1,3 @@
-import ast
 import threading
 from iot_devices import IoTDevice
 from secure_vault import SecureVault
@@ -26,13 +25,12 @@ class IoTServer:
 
     #     with self.__lock:
             
+    def encrypt(self, key, payload) -> bytes:
+        return AES.new(key, AES.MODE_ECB).encrypt(pad(payload, 16))
 
-    def encrypt(self, key, payload):
-        return AES.new(key, AES.MODE_ECB).encrypt(pad(str.encode(payload), 16))
-
-    def decrypt(self, key, cipher):
-        return unpad(AES.new(key, AES.MODE_ECB).decrypt(cipher), 16).decode("utf-8")
-
+    def decrypt(self, key, payload) -> str:
+        return unpad(AES.new(key, AES.MODE_ECB).decrypt(payload), 16)
+    
     def startAuthentication(self, m1: tuple):
         deviceID, sessionID = m1
         self.__pendingDevices.append((deviceID, sessionID))
@@ -61,30 +59,22 @@ class IoTServer:
             return
         
         k2 = self.__SV_database[index].getKey(c2)
-        k3 = bytes(a ^ b for a, b in zip(k2, int(t1).to_bytes(16, byteorder='big')))
+        k3 = bytes(a ^ b for a, b in zip(k2, t1))
         
         t2 = SecureVault.generateRandomNumber()
-        payload = str(r2) + "||" + str(t2)
+        payload = r2 + t2
         m4 = self.encrypt(k3, payload)
         
         device.sendMessage4(m4)
-     
-        
-        
-        
-            
-        
-    def __parse_m3(self, m3):
-        # Split m3 using b"||" as the delimiter
-        components = m3.split("||")
-        if len(components) != 4:
-            raise ValueError("Invalid m3 format: expected 4 components separated by b'||'")
+             
 
-        # Convert each component from bytes to int
-        r1 = int(components[0])
-        t1 = int(components[1])
-        c2 = ast.literal_eval(components[2])
-        r2 = int(components[3])
+    def __parse_m3(self, msg: bytes) -> tuple:
+        M = 16
+
+        r1 = msg[:M]  # Convert byte string to actual bytes
+        t1 = msg[M:M*2]  # Convert byte string to actual bytes
+        c2 = msg[M*2:len(msg)-M]  # Convert list representation to actual list
+        r2 = msg[-M:]  # Convert byte string to actual bytes
 
         return r1, t1, c2, r2
 
