@@ -2,6 +2,7 @@ import random
 from secure_vault import SecureVault
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
+from global_variables import M
 
 class IoTDevice:
     def __init__(self, id):
@@ -9,8 +10,6 @@ class IoTDevice:
         self.__server = None
         self.__secureVault = None
         
-        
-
     def getID(self):
         return self.__id
 
@@ -51,7 +50,11 @@ class IoTDevice:
             print("Device authentication failed")
             
         sessionKey = bytes(a ^ b for a, b in zip(t2, self.__t1))
-        print(f"Session key: {sessionKey.hex()}")
+        print(f"Session key Device: {sessionKey.hex()}")
+        
+        self.__secureVault.update_vault(sessionKey)
+        
+        return True
         
 
     def encrypt(self, key, payload) -> bytes:
@@ -61,8 +64,6 @@ class IoTDevice:
         return unpad(AES.new(key, AES.MODE_ECB).decrypt(payload), 16)
     
     def __parse_m4(self, msg):
-        M = 16
-
         r2 = msg[:M]
         t2 = msg[M:M*2]
 
