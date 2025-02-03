@@ -1,3 +1,3 @@
-N = 5 # Number of keys; Max 256
-M = 16 # Size of each key (in bytes); 16, 24 or 32
-P = 2 # Number of keys in a challenge; <= N
+N = 128   # Number of keys in the secure vault (Max: 256)
+M = 16  # Size of each key in bytes (Valid values: 16, 24, or 32 for AES)
+P = 32   # Number of keys used in each authentication challenge (Must be <= N)

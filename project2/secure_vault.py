@@ -43,7 +43,7 @@ class SecureVault:
         return random.sample(range(N), P)
     
     @staticmethod
-    def generateRandomNumber():
+    def generateRandomNumber() -> bytes:
         """
         Generates a cryptographically secure random number.
         
@@ -52,7 +52,7 @@ class SecureVault:
         """
         return os.urandom(M)
 
-    def update_vault(self, data):
+    def update_vault(self, data : bytes):
         """
         Updates the vault by computing an HMAC over the concatenation of all keys.
         The HMAC result is partitioned and XORed with existing keys to refresh them.

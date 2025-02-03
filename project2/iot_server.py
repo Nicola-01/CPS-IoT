@@ -2,8 +2,7 @@ import copy
 import threading
 from iot_devices import IoTDevice
 from secure_vault import SecureVault
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
+from crypto_utils import encrypt, decrypt
 from global_variables import M
 
 class IoTServer(threading.Thread):
@@ -26,6 +25,7 @@ class IoTServer(threading.Thread):
         self.__devices = [] # List of IoTDevice objects
         self.__pairedDevices = [] # List of device IDs that have been paired
         self.__pendingDevices = [] # List of device IDs that are pending
+
 
     def run(self):
         """
@@ -54,7 +54,7 @@ class IoTServer(threading.Thread):
 
                 k1 = secureVault.getKey(c1)
                 print(f"   Server sends M2 to D{deviceID}: {m2}")
-                m3 = self.decrypt(k1, device.sendMessage2(m2))
+                m3 = decrypt(k1, device.sendMessage2(m2))
 
                 # Parse M3 message
                 r1_received, t1, c2, r2 = self.__parse_m3(m3)
@@ -72,7 +72,7 @@ class IoTServer(threading.Thread):
 
                 # Generate M4 message
                 payload = r2 + t2
-                m4 = self.encrypt(k3, payload)
+                m4 = encrypt(k3, payload)
 
                 # Authenticate device
                 print(f"   Server sends M4 to D{deviceID}: {m4}")
@@ -88,33 +88,6 @@ class IoTServer(threading.Thread):
                     self.__pairedDevices.append(deviceID)
                     # print(f"Device {deviceID} successfully authenticated.")
 
-
-    def encrypt(self, key, payload) -> bytes:
-        """
-        Encrypts a payload using AES-CBC mode with a random IV.
-
-        Args:
-            key (bytes): AES encryption key.
-            payload (bytes): Data to encrypt.
-
-        Returns:
-            bytes: Encrypted data with IV prepended.
-        """
-        return AES.new(key, AES.MODE_ECB).encrypt(pad(payload, 16))
-
-    def decrypt(self, key, payload) -> str:
-        """
-        Decrypts AES-CBC encrypted data.
-
-        Args:
-            key (bytes): AES decryption key.
-            payload (bytes): Encrypted message (IV + Ciphertext).
-
-        Returns:
-            bytes: Decrypted plaintext.
-        """
-        return unpad(AES.new(key, AES.MODE_ECB).decrypt(payload), 16)
-
     def startAuthentication(self, m1: tuple):
         """
         Adds a device to the authentication queue.
@@ -124,8 +97,6 @@ class IoTServer(threading.Thread):
         """
 
         deviceID, sessionID = m1
-
-
 
         with self.__condition:
             
@@ -157,7 +128,7 @@ class IoTServer(threading.Thread):
 
         return r1, t1, c2, r2
 
-    def setUpConnection(self, device):
+    def setUpConnection(self, device : IoTDevice) -> SecureVault:
         """
         Registers a new IoT device.
 
@@ -173,7 +144,7 @@ class IoTServer(threading.Thread):
             self.__SV_database.append(SecureVault())
             return copy.deepcopy(self.__SV_database[-1])
 
-    def contains(self, deviceID: int):
+    def contains(self, deviceID: int) -> bool:
         """
         Checks if a device is already registered.
 
@@ -185,7 +156,7 @@ class IoTServer(threading.Thread):
         """
         return self.getDeviceIndex(deviceID) != -1
 
-    def getDevice(self, deviceID: int):
+    def getDevice(self, deviceID: int) -> IoTDevice:
         """
         Retrieves a registered IoT device.
 
@@ -200,7 +171,7 @@ class IoTServer(threading.Thread):
             return self.__devices[index]
         return None
 
-    def getDeviceIndex(self, deviceID: int):
+    def getDeviceIndex(self, deviceID: int) -> int:
         """
         Finds the index of a device in the device list.
 
