@@ -1,9 +1,10 @@
 import time
+import threading
 from secure_vault import SecureVault
 from crypto_utils import encrypt, decrypt
 from global_variables import M
 
-class IoTDevice:
+class IoTDevice(threading.Thread):
     """
     IoT Device class that handles authentication and secure communication 
     with an IoT server using the Secure Vault mechanism.
@@ -15,6 +16,8 @@ class IoTDevice:
         Args:
             id (int): Unique device ID.
         """
+        
+        super().__init__()
         self.__id = id
         self.__server = None
         self.__secureVault = None
@@ -25,19 +28,22 @@ class IoTDevice:
 
     def connect(self, server : 'IoTServer'):
         """
-        Establishes a connection with the IoT server and starts authentication.
+        Establishes a connection with the IoT server.
         
         Args:
             server (IoTServer): The IoT server to connect to.
         """
         
-        print(f"Device {self.__id} (D{self.__id}) start connection to server")
-        
-        sessionID = SecureVault.generateRandomNumber()
-        m1 = (self.__id, sessionID)
-
         self.__server = server
         self.__secureVault = self.__server.setUpConnection(self)
+        self.start()
+        
+    def run(self):
+        """Starts the IoT device thread, initialising the authentication process."""
+        
+        print(f"Device {self.__id} (D{self.__id}) start connection to server")
+        sessionID = SecureVault.generateRandomNumber()
+        m1 = (self.__id, sessionID)
         
         print(f"   D{self.__id} sends M1 to Server: {m1}")
         self.__startTime = time.time()
