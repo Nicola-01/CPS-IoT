@@ -3,8 +3,9 @@ import sys
 import time
 from iot_server import IoTServer
 from iot_device import IoTDevice
+from prettytable import PrettyTable
 
-IoTDeviceNum = 1000
+IoTDeviceNum = 10
 DEBUG_LOGS = False
 
 if __name__ == "__main__":
@@ -29,17 +30,17 @@ if __name__ == "__main__":
     
     sys.stdout = sys.__stdout__ 
     
-        # Print the table
+    # Print the table
     print(f"\n\nTiming Results, ECC")
-    print("+---------+----------------+")
-    print("| Device  | Authentication |")
-    print("+=========+================+")
-
-    for t in timings:
-        print(f"| {t[0]:7} | {t[1]:.12f} |")
-    print("+=========+================+")
-    print(f"| Average | {avg_auth:.12f} |")
-    print("+---------+----------------+")
     
-    print("Exiting program...")
+    table = PrettyTable()
+    table.field_names = ["Device ID", "Auth. (ms)"]
+    for t in timings:
+        table.add_row([f"{t[0]}", f"{t[1]*1000:.8f}"])
+    
+    table.add_divider()
+    table.add_row(["Average", f"{avg_auth*1000:.8f}"])
+    print(table)
+    
+    print("\nExiting program...")
         

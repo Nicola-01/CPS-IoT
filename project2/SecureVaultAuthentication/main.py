@@ -4,6 +4,7 @@ import time
 from iot_device import IoTDevice
 from iot_server import IoTServer
 from global_variables import M
+from prettytable import PrettyTable
 
 """
 main.py - Entry point for the IoT authentication system.
@@ -18,7 +19,7 @@ Execution Flow:
 
 """
 
-IoTDeviceNum = 1000
+IoTDeviceNum = 10
 DEBUG_LOGS = False
 
 if __name__ == "__main__":
@@ -58,16 +59,17 @@ if __name__ == "__main__":
 
     # Print the table
     print(f"\n\nTiming Results, AES-{8*M} Encryption/Decryption, SHA 512 with HMAC for SV update:")
-    print("+---------+----------------+----------------+----------------++----------------+")
-    print("| Device  |  Encrypt Time  |  Decrypt Time  | SV Update Time || Authentication |")
-    print("+=========+================+================+================++================+")
-
+    
+    table = PrettyTable()
+    table.field_names = ["Device ID", "Encrypt (ms)", "Decrypt (ms)", "SV Update (ms)", "Auth. (ms)"]
+    
     for t in timings:
-        print(f"| {t[0]:7} | {t[1]:.12f} | {t[2]:.12f} | {t[3]:.12f} || {t[4]:.12f} |")
-    print("+=========+================+================+================++================+")
-    print(f"| Average | {avg_encrypt:.12f} | {avg_decrypt:.12f} | {avg_sv_update:<.12f} || {avg_auth:.12f} |")
-    print("+---------+----------------+----------------+----------------++----------------+")
+        table.add_row([f"{t[0]}", f"{t[1]*1000:.8f}", f"{t[2]*1000:.8f}", f"{t[3]*1000:.8f}", f"{t[4]*1000:.8f}"])
+
+    table.add_divider()
+    table.add_row(["Average", f"{avg_encrypt*1000:.8f}", f"{avg_decrypt*1000:.8f}", f"{avg_sv_update*1000:.8f}", f"{avg_auth*1000:.8f}"])
+    print(table)
+        
+    print(f"Decrypt avg time + Encrypt avg time + SV Update avg time: {(avg_decrypt*1000 + avg_encrypt*1000 + avg_sv_update*1000):.8f} ms")
     
-    print(f"\nDecrypt + Encrypt + SV Update: {avg_decrypt + avg_encrypt + avg_sv_update:.12f}")
-    
-    print("Exiting program...")
+    print("\nExiting program...")
