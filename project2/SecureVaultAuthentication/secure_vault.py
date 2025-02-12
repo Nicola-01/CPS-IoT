@@ -73,7 +73,7 @@ class SecureVault:
         startTime = time.time()
                 
         # Compute HMAC (hashing all keys together using exchanged data as the key)
-        h = hmac.new(data, b''.join(self.__keys), hashlib.sha256).digest()
+        h = hmac.new(data, b''.join(self.__keys), hashlib.sha512).digest()
         
         # Ensure proper partitioning: Pad with zeros if needed
         if len(h) % M != 0:

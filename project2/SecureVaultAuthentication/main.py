@@ -3,6 +3,7 @@ import time
 from iot_devices import IoTDevice
 from iot_server import IoTServer
 from tabulate import tabulate
+from global_variables import M
 
 """
 main.py - Entry point for the IoT authentication system.
@@ -47,12 +48,16 @@ if __name__ == "__main__":
     avg_decrypt = sum(t[2] for t in timings) / IoTDeviceNum
     avg_sv_update = sum(t[3] for t in timings) / IoTDeviceNum
 
-    # Print table
-    table_data = [["Device", "Encrypt Time", "Decrypt Time", "SV Update Time"]]
+    # Print the table
+    print("Timing Results, AES-128 Encryption/Decryption, SHA 512 with HMAC for SV update:")
+    print("+---------+----------------+----------------+----------------+")
+    print("| Device  | Encrypt Time   | Decrypt Time   | SV Update Time |")
+    print("+=========+================+================+================+")
+
     for t in timings:
-        table_data.append([t[0], f"{t[1]:.10f}", f"{t[2]:.10f}", f"{t[3]:.10f}"])
-    table_data.append(["═" * 7, "═" * 13, "═" * 13, "═" * 13])
-    table_data.append(["Average", f"{avg_encrypt:.10f}", f"{avg_decrypt:.10f}", f"{avg_sv_update:.10f}"])
-    print(tabulate(table_data, headers="firstrow", tablefmt="fancy_grid"))
+        print(f"| {t[0]:7} | {t[1]:.12f} | {t[2]:.12f} | {t[3]:.12f} |")
+    print("+=========+================+================+================+")
+    print(f"| Average | {avg_encrypt:<.12f} | {avg_decrypt:<.12f} | {avg_sv_update:<.12f} |")
+    print("+---------+----------------+----------------+----------------+")
     
     print("Exiting program...")
