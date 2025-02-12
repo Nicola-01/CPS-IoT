@@ -9,7 +9,7 @@ class IoTServer(threading.Thread):
         super().__init__()
         self.key = ECC.generate(curve='secp256r1')
         self.public_key = self.key.public_key()
-        self.__auth_requests = {}  # Private dictionary to store authentication requests
+        self.__auth_requests = []  # Private dictionary to store authentication requests
         self.lock = threading.Lock()
 
     def generate_nonce(self):
@@ -25,18 +25,24 @@ class IoTServer(threading.Thread):
         Insert authentication data into __auth_requests for a specific device_id.
         """
         with self.lock:
-            self.__auth_requests[device_id] = {
+            self.__auth_requests.append({
+                'device_id': device_id,
                 'server_nonce': server_nonce,
                 'device_nonce': device_nonce,
                 'device_public_key': device_public_key
-            }
+            })
 
     def authenticate_device(self, device_id, device_public_key, device_signature, device_nonce):
         with self.lock:
-            if device_id not in self.__auth_requests:
+            found = False
+            for auth_data in self.__auth_requests:
+                if auth_data['device_id'] == device_id:
+                    found = True
+                    break
+            if not found:
                 return None
 
-            auth_data = self.__auth_requests.pop(device_id)
+            auth_data = self.__auth_requests.pop(0)
             stored_server_nonce = auth_data['server_nonce']
             stored_device_nonce = auth_data['device_nonce']
             stored_device_public_key = auth_data['device_public_key']

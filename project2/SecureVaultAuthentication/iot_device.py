@@ -45,12 +45,14 @@ class IoTDevice(threading.Thread):
     def run(self):
         """Starts the IoT device thread, initialising the authentication process."""
         
+        self.__startTime = time.time()
+        
         print(f"Device {self.__id} (D{self.__id}) start connection to server")
         sessionID = SecureVault.generateRandomNumber()
         m1 = (self.__id, sessionID)
         
         print(f"   D{self.__id} sends M1 to Server: {m1}")
-        self.__startTime = time.time()
+
         self.__server.startAuthentication(m1)
 
     def sendMessage2(self, m2 : tuple) -> bytes:
