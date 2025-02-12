@@ -2,3 +2,5 @@
 project1/__pycache__/
 
 project2/__pycache__/
+
+*.pyc

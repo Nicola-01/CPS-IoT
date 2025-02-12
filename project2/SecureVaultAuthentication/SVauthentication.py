@@ -3,7 +3,7 @@ import sys
 import time
 from iot_device import IoTDevice
 from iot_server import IoTServer
-from global_variables import M
+from global_variables import *
 from prettytable import PrettyTable
 
 """
@@ -19,7 +19,7 @@ Execution Flow:
 
 """
 
-IoTDeviceNum = 10
+IoTDeviceNum = 1000
 DEBUG_LOGS = False
 
 if __name__ == "__main__":
@@ -58,7 +58,8 @@ if __name__ == "__main__":
     sys.stdout = sys.__stdout__ 
 
     # Print the table
-    print(f"\n\nTiming Results, AES-{8*M} Encryption/Decryption, SHA 512 with HMAC for SV update:")
+    SVupdate = "SHA-512 with HMAC" if SHA512_WITH_HMAC else "SHA-512"
+    print(f"\n\nTiming Results, AES-{8*M} as Encryption/Decryption, {SVupdate} for secure valult update:")
     
     table = PrettyTable()
     table.field_names = ["Device ID", "Encrypt (ms)", "Decrypt (ms)", "SV Update (ms)", "Auth. (ms)"]
