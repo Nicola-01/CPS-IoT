@@ -5,7 +5,7 @@ from crypto_utils import *
 class IoTServer(threading.Thread):
     def __init__(self):
         super().__init__()
-        self.key = ECC.generate(curve='secp256r1')
+        self.key = ECC.generate(curve='secp256r1') # Most Commonly Curve
         self.public_key = self.key.public_key()
         self.__auth_requests = []  # Private dictionary to store authentication requests
         self.lock = threading.Lock()
@@ -29,7 +29,7 @@ class IoTServer(threading.Thread):
             })
             return server_nonce
 
-    def authenticate_device(self, device_id, device_signature, device_nonce):
+    def authenticate_device(self, device_id, device_signature):
         with self.lock:
             found = False
             for auth_data in self.__auth_requests:
@@ -40,16 +40,12 @@ class IoTServer(threading.Thread):
                 return None
 
             auth_data = self.__auth_requests.pop(0)
-            stored_server_nonce = auth_data['server_nonce']
-            stored_device_nonce = auth_data['device_nonce']
-            stored_device_public_key = auth_data['device_public_key']
+            server_nonce = auth_data['server_nonce']
+            device_nonce = auth_data['device_nonce']
+            device_public_key = auth_data['device_public_key']
 
         # Verify the device's signature on the server's nonce      
-        if not verify_signature(stored_device_public_key, stored_server_nonce, device_signature):
-            return None
-
-        # Verify the device's nonce matches
-        if stored_device_nonce != device_nonce:
+        if not verify_signature(device_public_key, server_nonce, device_signature):
             return None
 
         # Sign the device's nonce and return the signature

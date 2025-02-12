@@ -1,4 +1,3 @@
-import time
 import os
 from Crypto.Signature import DSS
 from Crypto.Hash import SHA256

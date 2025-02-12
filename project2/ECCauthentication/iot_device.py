@@ -6,7 +6,7 @@ from crypto_utils import *
 class IoTDevice:
     def __init__(self, device_id):
         self.__device_id = device_id
-        self.__key = ECC.generate(curve='secp256r1')
+        self.__key = ECC.generate(curve='secp256r1') # Most Commonly Curve
         self.__public_key = self.__key.public_key()
 
     
@@ -24,7 +24,7 @@ class IoTDevice:
             device_signature = sign_data(self.__key, server_nonce)
 
             # Step 4: Send the device's public key, signature, and nonce to the server
-            server_signature = server.authenticate_device(self.__device_id, device_signature, device_nonce)
+            server_signature = server.authenticate_device(self.__device_id, device_signature)
             if server_signature is None:
                 print(f"Device {self.__device_id} failed device authentication.")
                 return
