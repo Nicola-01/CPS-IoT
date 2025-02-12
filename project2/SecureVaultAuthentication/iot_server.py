@@ -1,6 +1,6 @@
 import copy
 import threading
-from iot_devices import IoTDevice
+from iot_device import IoTDevice
 from secure_vault import SecureVault
 from crypto_utils import encrypt, decrypt
 from global_variables import M

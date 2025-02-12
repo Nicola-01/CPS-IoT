@@ -24,6 +24,7 @@ class IoTDevice(threading.Thread):
         self.__encryptTime = 0 # Time to encrypt the message
         self.__decryptTime = 0 # Time to decrypt the message
         self.__SVupdateTime = 0 # Time to update the secure vault
+        self.__authenticationTime = 0 # Time taken for authentication
         
     def getID(self):
         """Returns the device ID."""
@@ -101,7 +102,6 @@ class IoTDevice(threading.Thread):
             print(f"D{self.__id}: Server authentication failed")
             return False 
         
-        self.__finishTime = time.time()
         
         print(f"   D{self.__id}: Server successfully authenticated")
                     
@@ -109,11 +109,13 @@ class IoTDevice(threading.Thread):
         sessionKey = bytes(a ^ b for a, b in zip(t2, self.__t1))
         print(f"   Session key (Device {self.__id}) for server: {sessionKey.hex()}")
         
-        print(f"Device {self.__id}: time taken for authentication: {self.__finishTime - self.__startTime:.4f} seconds")
         
         # Update vault using session key
         print(f"   D{self.__id}: Update vault with session key")
         self.__SVupdateTime = self.__secureVault.update_vault(sessionKey)
+        
+        self.__authenticationTime = time.time() - self.__startTime
+        print(f"Device {self.__id}: time taken for authentication: {self.__authenticationTime} seconds")
         
         return True
             
@@ -134,5 +136,5 @@ class IoTDevice(threading.Thread):
     
     def getTimings(self):
         """Returns the timing information for the device."""
-        return self.__encryptTime, self.__decryptTime, self.__SVupdateTime
+        return self.__encryptTime, self.__decryptTime, self.__SVupdateTime, self.__authenticationTime
         
