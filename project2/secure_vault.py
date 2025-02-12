@@ -2,6 +2,7 @@ import os
 import hmac
 import hashlib
 import random
+import time
 from global_variables import N, M, P
 
 class SecureVault:
@@ -52,19 +53,24 @@ class SecureVault:
         """
         return os.urandom(M)
 
-    def update_vault(self, data : bytes):
+    def update_vault(self, data : bytes) -> float:
         """
         Updates the vault by computing an HMAC over the concatenation of all keys.
         The HMAC result is partitioned and XORed with existing keys to refresh them.
 
         Args:
             data (bytes): The exchanged data used as the HMAC key.
+            
+        Returns:
+            float: Time taken to update the vault.
         
         Process:
         1. Compute HMAC using `data` as the key and all concatenated keys as the message.
         2. If the HMAC output is smaller than M-byte partitions, pad it with zeros.
         3. XOR the vault keys with corresponding partitions of the HMAC output.
         """
+        
+        startTime = time.time()
                 
         # Compute HMAC (hashing all keys together using exchanged data as the key)
         h = hmac.new(data, b''.join(self.__keys), hashlib.sha256).digest()
@@ -79,3 +85,5 @@ class SecureVault:
         # XOR each vault key with the corresponding partition (cyclic indexing)
         for i in range(len(self.__keys)):
             self.__keys[i] = bytes(a ^ b for a, b in zip(self.__keys[i], partitions[i % len(partitions)]))
+            
+        return time.time() - startTime

@@ -54,7 +54,7 @@ class IoTServer(threading.Thread):
 
                 k1 = secureVault.getKey(c1)
                 print(f"   Server sends M2 to D{deviceID}: {m2}")
-                m3 = decrypt(k1, device.sendMessage2(m2))
+                m3, _ = decrypt(k1, device.sendMessage2(m2))
 
                 # Parse M3 message
                 r1_received, t1, c2, r2 = self.__parse_m3(m3)
@@ -72,7 +72,7 @@ class IoTServer(threading.Thread):
 
                 # Generate M4 message
                 payload = r2 + t2
-                m4 = encrypt(k3, payload)
+                m4,_ = encrypt(k3, payload)
 
                 # Authenticate device
                 print(f"   Server sends M4 to D{deviceID}: {m4}")

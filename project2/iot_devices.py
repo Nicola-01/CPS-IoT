@@ -21,6 +21,9 @@ class IoTDevice(threading.Thread):
         self.__id = id
         self.__server = None
         self.__secureVault = None
+        self.__encryptTime = 0 # Time to encrypt the message
+        self.__decryptTime = 0 # Time to decrypt the message
+        self.__SVupdateTime = 0 # Time to update the secure vault
         
     def getID(self):
         """Returns the device ID."""
@@ -73,7 +76,7 @@ class IoTDevice(threading.Thread):
 
         # Concatenate payload components
         m3Payload = r1 + self.__t1 + bytes(self.__c2) + self.__r2
-        m3 = encrypt(k1, m3Payload)
+        m3, self.__encryptTime  = encrypt(k1, m3Payload)
         print(f"   D{self.__id} sends M3 to Server: {m3}")
         return m3
     
@@ -91,7 +94,8 @@ class IoTDevice(threading.Thread):
         k2 = self.__secureVault.getKey(self.__c2)
         k3 = bytes(a ^ b for a, b in zip(k2, self.__t1))
         
-        r2, t2 = self.__parse_m4(decrypt(k3, m4))
+        plaintext, self.__decryptTime  = decrypt(k3, m4)
+        r2, t2 = self.__parse_m4(plaintext)
         
         if (r2 != self.__r2):
             print(f"D{self.__id}: Server authentication failed")
@@ -109,7 +113,7 @@ class IoTDevice(threading.Thread):
         
         # Update vault using session key
         print(f"   D{self.__id}: Update vault with session key")
-        self.__secureVault.update_vault(sessionKey)
+        self.__SVupdateTime = self.__secureVault.update_vault(sessionKey)
         
         return True
             
@@ -127,4 +131,8 @@ class IoTDevice(threading.Thread):
         r2 = msg[:M]
         t2 = msg[M:M*2]
         return r2, t2
+    
+    def getTimings(self):
+        """Returns the timing information for the device."""
+        return self.__encryptTime, self.__decryptTime, self.__SVupdateTime
         

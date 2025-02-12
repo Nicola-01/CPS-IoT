@@ -1,8 +1,9 @@
+import time
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from global_variables import M
 
-def encrypt(key : bytes, payload : bytes) -> bytes:
+def encrypt(key : bytes, payload : bytes) -> tuple:
     """
     Encrypts a payload using AES-CBC mode.
 
@@ -12,10 +13,13 @@ def encrypt(key : bytes, payload : bytes) -> bytes:
 
     Returns:
         bytes: Encrypted ciphertext.
+        float: Time taken to encrypt the payload.
     """
-    return AES.new(key, AES.MODE_ECB).encrypt(pad(payload, 16))
+    
+    startTime = time.time()
+    return AES.new(key, AES.MODE_ECB).encrypt(pad(payload, 16)), time.time() - startTime
 
-def decrypt(key : bytes, payload : bytes) -> str:
+def decrypt(key : bytes, payload : bytes) -> tuple:
     """
     Decrypts AES-CBC encrypted data.
 
@@ -25,5 +29,8 @@ def decrypt(key : bytes, payload : bytes) -> str:
 
     Returns:
         bytes: Decrypted plaintext.
+        float: Time taken to decrypt the payload.
     """
-    return unpad(AES.new(key, AES.MODE_ECB).decrypt(payload), 16)
+    
+    startTime = time.time()
+    return unpad(AES.new(key, AES.MODE_ECB).decrypt(payload), 16), time.time() - startTime
