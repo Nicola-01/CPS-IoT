@@ -4,3 +4,7 @@ project1/__pycache__/
 project2/__pycache__/
 
 *.pyc
+
+project2/ECCauthentication/__pycache__/
+
+project2/SecureVaultAuthentication/__pycache__/
