@@ -2,15 +2,32 @@ import time
 from Crypto.PublicKey import ECC
 from crypto_utils import *
 
-
 class IoTDevice:
+    """
+    IoT Device class that handles authentication with the IoT server.
+    Uses ECC for secure communication and mutual authentication.
+    """
     def __init__(self, device_id):
+        """
+        Initializes the IoT device.
+        
+        Args:
+            device_id (int): The unique ID of the device.
+        """
         self.__deviceID = device_id
-        self.__key = ECC.generate(curve='secp256r1') # Most Commonly Curve
-        self.__public_key = self.__key.public_key()
+        self.__key = ECC.generate(curve='secp256r1')  # Generate ECC key using the secp256r1 curve
+        self.__public_key = self.__key.public_key()  # Extract the public key
 
-    
     def connect(self, server):
+        """
+        Connects the device to the server and performs mutual authentication.
+        
+        Args:
+            server (IoTServer): The IoT server to connect to.
+        
+        Returns:
+            float: The time taken for authentication, or None if authentication fails.
+        """
         try:
             startTime = time.time()
             # Step 1: Generate a nonce for the device
