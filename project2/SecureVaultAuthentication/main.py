@@ -19,7 +19,7 @@ Execution Flow:
 """
 
 # Number of IoT devices to simulate
-IoTDeviceNum = 30
+IoTDeviceNum = 1000
 
 # Flag to enable or disable debug logs
 DEBUG_LOGS = False
@@ -47,9 +47,12 @@ if __name__ == "__main__":
         # Append the timing results to the list
         timings.append((i, encryptTime, decryptTime, SVupdateTime, authenticationTime))
     
+    
+    # Restore stdout to display results
+    sys.stdout = sys.__stdout__ 
+    
     # Attempt to reconnect existing devices (to test duplicate authentication)
     IoTDevice(1).connect(server)  # Reconnect device 1
-    IoTDevice(3).connect(server)  # Reconnect device 3
     
     # Wait for all authentication processes to complete
     time.sleep(0.1)
@@ -60,8 +63,6 @@ if __name__ == "__main__":
     avg_sv_update = sum(t[3] for t in timings) / IoTDeviceNum
     avg_auth = sum(t[4] for t in timings) / IoTDeviceNum
 
-    # Restore stdout to display results
-    sys.stdout = sys.__stdout__ 
 
     # Print the table with timing results
     SVupdate = "SHA-512 with HMAC" if SHA512_WITH_HMAC else "SHA-512"
@@ -69,15 +70,15 @@ if __name__ == "__main__":
     
     # Create a PrettyTable to display the results
     table = PrettyTable()
-    table.field_names = ["Device ID", "Encrypt (ms)", "Decrypt (ms)", "SV Update (ms)", "Auth. (ms)"]
+    table.field_names = ["Device ID", "Encrypt (ms)", "Decrypt (ms)", "SV Update (ms)", "" , "Auth. (ms)"]
     
     # Add each device's timing results to the table
     for t in timings:
-        table.add_row([f"{t[0]}", f"{t[1]*1000:.8f}", f"{t[2]*1000:.8f}", f"{t[3]*1000:.8f}", f"{t[4]*1000:.8f}"])
+        table.add_row([f"{t[0]}", f"{t[1]*1000:.8f}", f"{t[2]*1000:.8f}", f"{t[3]*1000:.8f}", "" , f"{t[4]*1000:.8f}"])
 
     # Add a divider and the average times to the table
     table.add_divider()
-    table.add_row(["Average", f"{avg_encrypt*1000:.8f}", f"{avg_decrypt*1000:.8f}", f"{avg_sv_update*1000:.8f}", f"{avg_auth*1000:.8f}"])
+    table.add_row(["Average", f"{avg_encrypt*1000:.8f}", f"{avg_decrypt*1000:.8f}", f"{avg_sv_update*1000:.8f}", "", f"{avg_auth*1000:.8f}"])
     print(table)
         
     # Print the sum of average decryption, encryption, and secure vault update times

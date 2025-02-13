@@ -54,12 +54,22 @@ class SecureVault:
         return os.urandom(M)
 
     def update_vault(self, data : bytes) -> float:
-        
-        
+        """
+        Updates the secure vault using either HMAC-SHA512 or SHA512, depending on the global configuration.
+
+        Args:
+            data (bytes): The exchanged data (e.g., session key) used to update the vault.
+
+        Returns:
+            float: The time taken (in seconds) to update the vault.
+            
+        Notes:
+            - The choice of HMAC-SHA512 or SHA512 is determined by the `SHA512_WITH_HMAC` flag in `global_variables.py`.
+        """
         if SHA512_WITH_HMAC:
             return self.__SHA512_HMAC(data)
         else:
-            return self.__SHA512(data)
+            return self.__SHA512()
             
     def __SHA512_HMAC(self, data : bytes) -> bytes:
         """
@@ -95,14 +105,20 @@ class SecureVault:
             
         return time.time() - startTime
 
-    def __SHA512(self, data : bytes) -> bytes:
+    def __SHA512(self) -> bytes:
         """
+        Updates the secure vault using SHA-512.
 
+        Returns:
+            float: The time taken (in seconds) to update the vault.
+
+        Process:
+            For each key in the vault, compute its SHA-512 hash, and get first M characters.
         """
         startTime = time.time()
 
         # XOR each vault key with the corresponding partition (cyclic indexing)
         for i in range(len(self.__keys)):
-            self.__keys[i] = bytes(a ^ b for a, b in zip(self.__keys[i], hashlib.sha256(self.__keys[i]).digest()))
+            self.__keys[i] = hashlib.sha512(self.__keys[i]).digest()[:M]
             
         return time.time() - startTime

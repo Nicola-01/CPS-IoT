@@ -30,23 +30,23 @@ class IoTDevice:
         """
         try:
             startTime = time.time()
-            # Step 1: Generate a nonce for the device
+            # Generate a nonce for the device
             deviceNonce = generateNonce()
 
-            # Step 2: Request authentication from the server
+            # Request authentication from the server
             serverNonce = server.setUpConnection(self.__deviceID, deviceNonce, self.__public_key)
             serverPubKey = server.getPublicKey()
 
-            # Step 3: Sign the server's nonce
+            # Sign the server's nonce
             device_signature = signData(self.__key, serverNonce)
 
-            # Step 4: Send the device's public key, signature, and nonce to the server
+            # Send the device's public key, signature, and nonce to the server
             server_signature = server.startAuthentication(self.__deviceID, device_signature)
             if server_signature is None:
                 print(f"Device {self.__deviceID} failed device authentication.")
                 return
 
-            # Step 5: Verify the server's signature on the device's nonce
+            # Verify the server's signature on the device's nonce
             if not verifySignature(serverPubKey, deviceNonce, server_signature):
                 print(f"Device {self.__deviceID} failed server authentication.")
                 return

@@ -6,7 +6,7 @@ from iot_device import IoTDevice
 from prettytable import PrettyTable
 
 # Number of IoT devices to simulate
-IoTDeviceNum = 10
+IoTDeviceNum = 1000
 
 # Flag to enable or disable debug logs
 DEBUG_LOGS = False

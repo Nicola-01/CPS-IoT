@@ -42,7 +42,7 @@ class IoTServer(threading.Thread):
                 
                 # print(f"   D{deviceID} start authentication process")
 
-                request = self.getRequests(deviceID)
+                request = self.__getRequests(deviceID)
                 device = request['device']
                 secureVault = request['secureVault']
 
@@ -147,19 +147,7 @@ class IoTServer(threading.Thread):
             })
             return copy.deepcopy(sv)
 
-    def contains(self, deviceID: int) -> bool:
-        """
-        Checks if a device is already registered.
-
-        Args:
-            deviceID (int): Device ID.
-
-        Returns:
-            bool: True if the device is registered, False otherwise.
-        """
-        return self.getRequests(deviceID) != None
-
-    def getRequests(self, deviceID: int) -> IoTDevice:
+    def __getRequests(self, deviceID: int) -> IoTDevice:
         """
         Retrieves a registered IoT device.
 
@@ -173,18 +161,3 @@ class IoTServer(threading.Thread):
             if device['deviceID'] == deviceID:
                 return device
         return None
-
-    def getDeviceIndex(self, deviceID: int) -> int:
-        """
-        Finds the index of a device in the device list.
-
-        Args:
-            deviceID (int): Device ID.
-
-        Returns:
-            int: The index of the device, or -1 if not found.
-        """
-        for i, device in enumerate(self.__authRequests):
-            if device.getID() == deviceID:
-                return i
-        return -1
