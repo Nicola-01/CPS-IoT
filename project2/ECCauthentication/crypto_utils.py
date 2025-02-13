@@ -11,7 +11,7 @@ def generateNonce():
     """
     return os.urandom(16)
 
-def signData(key, data):
+def signData(key : bytes, data : bytes) -> bytes:
     """
     Sign the given data using the provided ECC key.
     
@@ -26,7 +26,7 @@ def signData(key, data):
     signer = DSS.new(key, 'fips-186-3')
     return signer.sign(h_data)
 
-def verifySignature(public_key, data, signature):
+def verifySignature(public_key : bytes, data : bytes, signature : bytes) -> bool:
     """
     Verify the signature of the given data using the provided ECC public key.
     

@@ -7,18 +7,18 @@ class IoTDevice:
     IoT Device class that handles authentication with the IoT server.
     Uses ECC for secure communication and mutual authentication.
     """
-    def __init__(self, device_id):
+    def __init__(self, deviceID : int):
         """
         Initializes the IoT device.
         
         Args:
-            device_id (int): The unique ID of the device.
+            deviceID (int): The unique ID of the device.
         """
-        self.__deviceID = device_id
+        self.__deviceID = deviceID
         self.__key = ECC.generate(curve='secp256r1')  # Generate ECC key using the secp256r1 curve
         self.__public_key = self.__key.public_key()  # Extract the public key
 
-    def connect(self, server):
+    def connect(self, server : 'IoTServer') -> float:
         """
         Connects the device to the server and performs mutual authentication.
         

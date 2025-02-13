@@ -22,7 +22,7 @@ class IoTServer(threading.Thread):
         """Return the server's public key."""
         return self.public_key
 
-    def setUpConnection(self, deviceID, deviceNonce, devicePublicKey):
+    def setUpConnection(self, deviceID : int, deviceNonce : bytes, devicePublicKey : bytes) -> bytes:
         """
         Insert authentication data into __authRequests for a specific deviceID.
         
@@ -44,7 +44,7 @@ class IoTServer(threading.Thread):
             })
             return serverNonce
 
-    def startAuthentication(self, deviceID, device_signature):
+    def startAuthentication(self, deviceID : int, device_signature : bytes) -> bytes:
         """
         Verify the device's signature and sign the device's nonce for mutual authentication.
         
