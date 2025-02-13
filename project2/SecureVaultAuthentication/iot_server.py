@@ -21,8 +21,7 @@ class IoTServer(threading.Thread):
         self.__lock = threading.Lock()
         self.__condition = threading.Condition(self.__lock)  # Condition variable
 
-        self.__SV_database = []
-        self.__devices = [] # List of IoTDevice objects
+        self.__authRequests = [] # List of IoTDevice objects
         self.__pairedDevices = [] # List of device IDs that have been paired
         self.__pendingDevices = [] # List of device IDs that are pending
 
@@ -43,9 +42,9 @@ class IoTServer(threading.Thread):
                 
                 # print(f"   D{deviceID} start authentication process")
 
-                device = self.getDevice(deviceID)
-                index = self.getDeviceIndex(deviceID)
-                secureVault = self.__SV_database[index]
+                request = self.getRequests(deviceID)
+                device = request['device']
+                secureVault = request['secureVault']
 
                 # Generate server's challenge
                 c1 = SecureVault.generateChallenge()
@@ -57,7 +56,7 @@ class IoTServer(threading.Thread):
                 m3, _ = decrypt(k1, device.sendMessage2(m2))
 
                 # Parse M3 message
-                r1_received, t1, c2, r2 = self.__parse_m3(m3)
+                r1_received, t1, c2, r2 = self.__parseM3(m3)
 
                 # Verify received challenge response
                 if r1_received != r1:
@@ -110,7 +109,7 @@ class IoTServer(threading.Thread):
             self.__condition.notify()
 
 
-    def __parse_m3(self, msg: bytes) -> tuple:
+    def __parseM3(self, msg: bytes) -> tuple:
         """
         Parses M3 message received from the IoT device.
 
@@ -140,9 +139,13 @@ class IoTServer(threading.Thread):
         """
 
         with self.__lock:
-            self.__devices.append(device)
-            self.__SV_database.append(SecureVault())
-            return copy.deepcopy(self.__SV_database[-1])
+            sv = SecureVault()
+            self.__authRequests.append({
+                'deviceID': device.getID(),
+                'device': device,
+                'secureVault': sv
+            })
+            return copy.deepcopy(sv)
 
     def contains(self, deviceID: int) -> bool:
         """
@@ -154,9 +157,9 @@ class IoTServer(threading.Thread):
         Returns:
             bool: True if the device is registered, False otherwise.
         """
-        return self.getDeviceIndex(deviceID) != -1
+        return self.getRequests(deviceID) != None
 
-    def getDevice(self, deviceID: int) -> IoTDevice:
+    def getRequests(self, deviceID: int) -> IoTDevice:
         """
         Retrieves a registered IoT device.
 
@@ -166,9 +169,9 @@ class IoTServer(threading.Thread):
         Returns:
             IoTDevice: The corresponding IoT device, or None if not found.
         """
-        index = self.getDeviceIndex(deviceID)
-        if index != -1:
-            return self.__devices[index]
+        for device in self.__authRequests:
+            if device['deviceID'] == deviceID:
+                return device
         return None
 
     def getDeviceIndex(self, deviceID: int) -> int:
@@ -181,7 +184,7 @@ class IoTServer(threading.Thread):
         Returns:
             int: The index of the device, or -1 if not found.
         """
-        for i, device in enumerate(self.__devices):
+        for i, device in enumerate(self.__authRequests):
             if device.getID() == deviceID:
                 return i
         return -1

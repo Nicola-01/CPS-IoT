@@ -98,7 +98,7 @@ class IoTDevice(threading.Thread):
         k3 = bytes(a ^ b for a, b in zip(k2, self.__t1))
         
         plaintext, self.__decryptTime  = decrypt(k3, m4)
-        r2, t2 = self.__parse_m4(plaintext)
+        r2, t2 = self.__parseM4(plaintext)
         
         if (r2 != self.__r2):
             print(f"D{self.__id}: Server authentication failed")
@@ -121,7 +121,7 @@ class IoTDevice(threading.Thread):
         
         return True
             
-    def __parse_m4(self, msg):
+    def __parseM4(self, msg):
         """
         Extracts r2 and t2 from M4 message.
 

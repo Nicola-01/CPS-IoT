@@ -19,7 +19,7 @@ Execution Flow:
 
 """
 
-IoTDeviceNum = 1000
+IoTDeviceNum = 30
 DEBUG_LOGS = False
 
 if __name__ == "__main__":
