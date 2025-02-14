@@ -1,4 +1,5 @@
 import os
+import time
 from Crypto.Signature import DSS
 from Crypto.Hash import SHA256
 
@@ -11,7 +12,7 @@ def generateNonce():
     """
     return os.urandom(16)
 
-def signData(key : bytes, data : bytes) -> bytes:
+def signData(key : bytes, data : bytes) -> tuple:
     """
     Sign the given data using the provided ECC key.
     
@@ -21,12 +22,14 @@ def signData(key : bytes, data : bytes) -> bytes:
     
     Returns:
         bytes: The signature of the data.
+        float: Time taken to sign the data.
     """
-    h_data = SHA256.new(data)
+    
+    startTime = time.time()
     signer = DSS.new(key, 'fips-186-3')
-    return signer.sign(h_data)
+    return signer.sign(SHA256.new(data)), time.time() - startTime 
 
-def verifySignature(public_key : bytes, data : bytes, signature : bytes) -> bool:
+def verifySignature(public_key : bytes, data : bytes, signature : bytes) -> tuple:
     """
     Verify the signature of the given data using the provided ECC public key.
     
@@ -37,11 +40,13 @@ def verifySignature(public_key : bytes, data : bytes, signature : bytes) -> bool
     
     Returns:
         bool: True if the signature is valid, False otherwise.
+        float: Time taken to decrverify the signature.
     """
-    h_data = SHA256.new(data)
-    verifier = DSS.new(public_key, 'fips-186-3')
+    
     try:
-        verifier.verify(h_data, signature)
-        return True
+        startTime = time.time()
+        verifier = DSS.new(public_key, 'fips-186-3')
+        verifier.verify(SHA256.new(data), signature)
+        return True, time.time() - startTime
     except ValueError:
         return False

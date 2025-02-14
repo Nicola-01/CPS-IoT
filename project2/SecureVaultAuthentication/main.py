@@ -38,7 +38,7 @@ if __name__ == "__main__":
     timings = []
     
     # Simulate multiple IoT devices attempting to connect to the server
-    for i in range(1, IoTDeviceNum + 1):
+    for i in range(0, IoTDeviceNum + 1):
         device = IoTDevice(i)  # Create a new IoT device
         device.connect(server)  # Connect the device to the server
         time.sleep(0.01)  # Wait for the device to connect
@@ -47,6 +47,8 @@ if __name__ == "__main__":
         # Append the timing results to the list
         timings.append((i, encryptTime, decryptTime, SVupdateTime, authenticationTime))
     
+    timings.pop(0)  # Remove the first device's timing results,
+                    # because they are larger than the others due to the additional code update time.
     
     # Restore stdout to display results
     sys.stdout = sys.__stdout__ 
@@ -58,10 +60,10 @@ if __name__ == "__main__":
     time.sleep(0.1)
     
     # Calculate average times for encryption, decryption, secure vault update, and authentication
-    avg_encrypt = sum(t[1] for t in timings) / IoTDeviceNum
-    avg_decrypt = sum(t[2] for t in timings) / IoTDeviceNum
-    avg_sv_update = sum(t[3] for t in timings) / IoTDeviceNum
-    avg_auth = sum(t[4] for t in timings) / IoTDeviceNum
+    avgEncrypt = sum(t[1] for t in timings) / IoTDeviceNum
+    avgDecrypt = sum(t[2] for t in timings) / IoTDeviceNum
+    avgSVupdate = sum(t[3] for t in timings) / IoTDeviceNum
+    avgAuth = sum(t[4] for t in timings) / IoTDeviceNum
 
 
     # Print the table with timing results
@@ -78,11 +80,11 @@ if __name__ == "__main__":
 
     # Add a divider and the average times to the table
     table.add_divider()
-    table.add_row(["Average", f"{avg_encrypt*1000:.8f}", f"{avg_decrypt*1000:.8f}", f"{avg_sv_update*1000:.8f}", "", f"{avg_auth*1000:.8f}"])
+    table.add_row(["Average", f"{avgEncrypt*1000:.8f}", f"{avgDecrypt*1000:.8f}", f"{avgSVupdate*1000:.8f}", "", f"{avgAuth*1000:.8f}"])
     print(table)
         
     # Print the sum of average decryption, encryption, and secure vault update times
-    print(f"Decrypt avg time + Encrypt avg time + SV Update avg time: {(avg_decrypt*1000 + avg_encrypt*1000 + avg_sv_update*1000):.8f} ms")
+    print(f"Decrypt avg time + Encrypt avg time + SV Update avg time: {(avgDecrypt*1000 + avgEncrypt*1000 + avgSVupdate*1000):.8f} ms")
     
     # Indicate program exit
     print("\nExiting program...")

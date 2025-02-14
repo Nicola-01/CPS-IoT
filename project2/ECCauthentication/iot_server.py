@@ -69,12 +69,13 @@ class IoTServer(threading.Thread):
             deviceNonce = authData['deviceNonce']
             devicePublicKey = authData['devicePublicKey']
 
-        # Verify the device's signature on the server's nonce      
-        if not verifySignature(devicePublicKey, serverNonce, device_signature):
+        # Verify the device's signature on the server's nonce  
+        verify, _ = verifySignature(devicePublicKey, serverNonce, device_signature)    
+        if not verify:
             return None
 
         # Sign the device's nonce and return the signature
-        return signData(self.key, deviceNonce)
+        return signData(self.key, deviceNonce)[0]
 
     def run(self):
         """Main server loop. No active processing needed in this example."""
