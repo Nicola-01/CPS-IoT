@@ -26,7 +26,7 @@ def signData(key : bytes, data : bytes) -> tuple:
     """
     
     startTime = time.time()
-    signer = DSS.new(key, 'fips-186-3')
+    signer = DSS.new(key, 'fips-186-3') # ECDSA
     return signer.sign(SHA256.new(data)), time.time() - startTime 
 
 def verifySignature(public_key : bytes, data : bytes, signature : bytes) -> tuple:
@@ -45,7 +45,7 @@ def verifySignature(public_key : bytes, data : bytes, signature : bytes) -> tupl
     
     try:
         startTime = time.time()
-        verifier = DSS.new(public_key, 'fips-186-3')
+        verifier = DSS.new(public_key, 'fips-186-3') # ECDSA
         verifier.verify(SHA256.new(data), signature)
         return True, time.time() - startTime
     except ValueError:
