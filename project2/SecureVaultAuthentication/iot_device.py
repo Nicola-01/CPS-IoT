@@ -47,7 +47,7 @@ class IoTDevice():
         
         print(f"   D{self.__id} sends M1 to Server: {m1}")
 
-        self.__server.startAuthentication(m1)
+        self.__server.authentication(m1)
        
 
     def sendMessage2(self, m2 : tuple) -> bytes:

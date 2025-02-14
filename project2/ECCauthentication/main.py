@@ -6,7 +6,7 @@ from iot_device import IoTDevice
 from prettytable import PrettyTable
 
 # Number of IoT devices to simulate
-IoTDeviceNum = 1000
+IoTDeviceNum = 30
 
 # Flag to enable or disable debug logs
 DEBUG_LOGS = False
@@ -60,8 +60,8 @@ if __name__ == "__main__":
     table.add_row(["Average", f"{avgKeyGen*1000:.8f}", f"{avgSignTime*1000:.8f}", f"{avgVerifyTime*1000:.8f}", "", f"{avgAuth*1000:.8f}"])
     print(table)
     
-    # Print the sum
-    print(f"Key gen avg + sign avg + verify time: {(avgKeyGen*1000 + avgSignTime*1000 + avgVerifyTime*1000 + avgAuth*1000):.8f} ms")
+    # Print the sum    
+    print(f"ECC: {(avgKeyGen + avgSignTime + avgVerifyTime)*(10**6):.8f} us")
     
     
     print("\nExiting program...")

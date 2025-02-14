@@ -19,7 +19,7 @@ Execution Flow:
 """
 
 # Number of IoT devices to simulate
-IoTDeviceNum = 1000
+IoTDeviceNum = 30
 
 # Flag to enable or disable debug logs
 DEBUG_LOGS = False
@@ -82,9 +82,13 @@ if __name__ == "__main__":
     table.add_divider()
     table.add_row(["Average", f"{avgEncrypt*1000:.8f}", f"{avgDecrypt*1000:.8f}", f"{avgSVupdate*1000:.8f}", "", f"{avgAuth*1000:.8f}"])
     print(table)
+    
+    aesAvg = (avgEncrypt+avgDecrypt)/2
+    print(f"\nAES-{8*M}: {aesAvg*(10**6):.3f} us")
+    print(f"{SVupdate}: {avgSVupdate*(10**6):.3f} us")
         
-    # Print the sum of average decryption, encryption, and secure vault update times
-    print(f"Decrypt avg time + Encrypt avg time + SV Update avg time: {(avgDecrypt*1000 + avgEncrypt*1000 + avgSVupdate*1000):.8f} ms")
+    print(f"\nSV algorithm: AES-{8*M} * 2 + SV Update = {(aesAvg*2 + avgSVupdate)*(10**6):.3f} us")
+    print(f"Single Rotating Password: AES-{8*M} * 3 = {(aesAvg*3)*(10**6):.3f} us")
     
     # Indicate program exit
     print("\nExiting program...")

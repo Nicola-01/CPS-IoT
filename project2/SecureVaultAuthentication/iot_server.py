@@ -34,7 +34,7 @@ class IoTServer(threading.Thread):
 
                 
 
-    def startAuthentication(self, m1: tuple):
+    def authentication(self, m1: tuple):
         """
         Adds a device to the authentication queue.
 
