@@ -53,7 +53,7 @@ class SecureVault:
         """
         return os.urandom(M)
 
-    def update_vault(self, data : bytes) -> float:
+    def updateVault(self, data : bytes) -> float:
         """
         Updates the secure vault using either HMAC-SHA512 or SHA512, depending on the global configuration.
 

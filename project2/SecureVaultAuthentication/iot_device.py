@@ -109,7 +109,7 @@ class IoTDevice():
         
         # Update vault using session key
         print(f"   D{self.__id}: Update vault with session key")
-        self.__SVupdateTime = self.__secureVault.update_vault(sessionKey)
+        self.__SVupdateTime = self.__secureVault.updateVault(sessionKey)
         
         self.__authenticationTime = time.time() - self.__startTime
         print(f"Device {self.__id}: time taken for authentication: {self.__authenticationTime} seconds")

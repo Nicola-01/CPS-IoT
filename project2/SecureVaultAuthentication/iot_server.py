@@ -32,7 +32,26 @@ class IoTServer(threading.Thread):
         """
         pass
 
-                
+    
+    def setUpConnection(self, device : IoTDevice) -> SecureVault:
+        """
+        Registers a new IoT device.
+
+        Args:
+            device (IoTDevice): The IoT device to register.
+
+        Returns:
+            SecureVault: A copy of the device's secure vault.
+        """
+
+        with self.__lock:
+            sv = SecureVault()
+            self.__authRequests.append({
+                'deviceID': device.getID(),
+                'device': device,
+                'secureVault': sv
+            })
+            return copy.deepcopy(sv)    
 
     def authentication(self, m1: tuple):
         """
@@ -67,10 +86,10 @@ class IoTServer(threading.Thread):
             m3, _ = decrypt(k1, device.sendMessage2(m2))
 
             # Parse M3 message
-            r1_received, t1, c2, r2 = self.__parseM3(m3)
+            r1Received, t1, c2, r2 = self.__parseM3(m3)
 
             # Verify received challenge response
-            if r1_received != r1:
+            if r1Received != r1:
                 print(f"Authentication failed at M3 verification for device {deviceID}.")
                 return
             print(f"   Server: D{deviceID} successfully verified M3")
@@ -92,7 +111,7 @@ class IoTServer(threading.Thread):
 
                 # Update secure vault
                 print(f"   Server updates vault with session key for D{deviceID}")
-                secureVault.update_vault(sessionKey)
+                secureVault.updateVault(sessionKey)
 
                 # Add device to paired list in a thread-safe way
                 self.__pairedDevices.append(deviceID)
@@ -116,26 +135,6 @@ class IoTServer(threading.Thread):
         r2 = msg[-M:]
 
         return r1, t1, c2, r2
-
-    def setUpConnection(self, device : IoTDevice) -> SecureVault:
-        """
-        Registers a new IoT device.
-
-        Args:
-            device (IoTDevice): The IoT device to register.
-
-        Returns:
-            SecureVault: A copy of the device's secure vault.
-        """
-
-        with self.__lock:
-            sv = SecureVault()
-            self.__authRequests.append({
-                'deviceID': device.getID(),
-                'device': device,
-                'secureVault': sv
-            })
-            return copy.deepcopy(sv)
 
     def __getRequests(self, deviceID: int) -> IoTDevice:
         """

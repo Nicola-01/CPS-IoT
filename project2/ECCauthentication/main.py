@@ -61,7 +61,7 @@ if __name__ == "__main__":
     print(table)
     
     # Print the sum    
-    print(f"ECC: {(avgKeyGen + avgSignTime + avgVerifyTime)*(10**6):.8f} us")
+    print(f"\nECC: Key gen + sing + verify = {(avgKeyGen + avgSignTime + avgVerifyTime)*(10**6):.8f} us")
     
     
     print("\nExiting program...")
